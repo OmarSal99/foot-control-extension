@@ -140,6 +140,18 @@ function connectDevice(){
   });
 }
 
+
+function closePopup(){
+  chrome.tabs.query(
+    { active: true, currentWindow: true },
+    function (tabs) {
+      chrome.tabs.sendMessage(tabs[0].id, {
+        action: ACTIONS.POPUP_CLOSE,
+      });
+    }
+  );
+}
+
 window.addEventListener("load", () => {
   document
     .getElementById("add-button")
@@ -147,6 +159,9 @@ window.addEventListener("load", () => {
     document
     .getElementById("connect-device-button")
     .addEventListener("click", connectDevice);
+    document
+    .getElementById("close-popup-button")
+    .addEventListener("click", closePopup);
   createMapping();
   updateMapping();
   chrome.tabs.query(
@@ -159,16 +174,9 @@ window.addEventListener("load", () => {
   );
 });
 
-window.addEventListener('beforeunload', () => {
-  chrome.tabs.query(
-    { active: true, currentWindow: true },
-    function (tabs) {
-      chrome.tabs.sendMessage(tabs[0].id, {
-        action: ACTIONS.POPUP_CLOSE,
-      });
-    }
-  );
-});
+window.addEventListener('beforeunload', closePopup);
+
+
 
 chrome.runtime.onMessage.addListener(function (
   message,

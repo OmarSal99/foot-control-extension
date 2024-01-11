@@ -60,12 +60,16 @@ chrome.runtime.onMessage.addListener(function (
             allInputFields[nextIndex].focus();
     }
     else if (message.action == ACTIONS.REQUEST_DEVICE){
+
         // request device logic and start capture
+        handleKeyInput("");
     } 
     else if (message.action == ACTIONS.POPUP_OPEN){
+        console.log("popupopen");
         isPopupOpen = true;
     }
     else if (message.action == ACTIONS.POPUP_CLOSE){
+        console.log("popupclose");
         isPopupOpen = false;
     }
   });
