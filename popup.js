@@ -104,6 +104,9 @@ function addNewMapping() {
   let inputKey = document.createElement("input");
   inputKey.type = "text";
   inputKey.classList.add("input-key");
+  inputKey.onkeydown = (event)=>{
+    event.preventDefault();
+  };
   newMapping.appendChild(inputKeyLabel);
   newMapping.appendChild(inputKey);
 
@@ -125,16 +128,58 @@ function addNewMapping() {
   newMapping.appendChild(deleteButton);
 
   mappingDiv.appendChild(newMapping);
-  inputKey.addEventListener("input", updateMapping);
+  //inputKey.addEventListener("input", updateMapping);
   addFieldButton.addEventListener("click", (event)=>{addOutputField(event.target.parentNode);});
   deleteButton.addEventListener("click", deleteMapping);
   return newMapping;
+}
+
+function connectDevice(){
+  chrome.runtime.sendMessage({
+    action: ACTIONS.REQUEST_DEVICE,
+  });
 }
 
 window.addEventListener("load", () => {
   document
     .getElementById("add-button")
     .addEventListener("click", addNewMapping);
+    document
+    .getElementById("connect-device-button")
+    .addEventListener("click", connectDevice);
   createMapping();
   updateMapping();
+  chrome.tabs.query(
+    { active: true, currentWindow: true },
+    function (tabs) {
+      chrome.tabs.sendMessage(tabs[0].id, {
+        action: ACTIONS.POPUP_OPEN,
+      });
+    }
+  );
 });
+
+window.addEventListener('beforeunload', () => {
+  chrome.tabs.query(
+    { active: true, currentWindow: true },
+    function (tabs) {
+      chrome.tabs.sendMessage(tabs[0].id, {
+        action: ACTIONS.POPUP_CLOSE,
+      });
+    }
+  );
+});
+
+chrome.runtime.onMessage.addListener(function (
+  message,
+  sender,
+  sendResponse
+) {
+  if (message.action == ACTIONS.INPUT_KEY_PRESSED) {
+    let focusedInput = document.activeElement;
+    if (focusedInput.classList.contains("input-key")){
+      focusedInput.value = message.key;
+      updateMapping();
+    }
+  }
+})
