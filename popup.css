@@ -1,0 +1,19 @@
+
+
+.input-key {
+    width: 40px;
+}
+
+.output-key {
+    width: 40px;
+}
+
+.input-key-label{
+    padding-left: 2px;
+    padding-right: 2px;
+}
+
+.output-key-label{
+    padding-left: 2px;
+    padding-right: 2px;
+}
