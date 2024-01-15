@@ -6,6 +6,8 @@ const LOCAL_STORAGE_ORDER_LIST = "footPedalOrderList";
 let keyMapping = {};
 let orderList = [];
 
+let inputIntervalId  = null;
+
 function isObjectEmpty(obj) {
   return Object.keys(obj).length === 0 && obj.constructor === Object;
 }
@@ -47,6 +49,7 @@ function updateMapping() {
   Array.from(keyMappingList).forEach(function (parentDiv) {
     let inputKey = parentDiv.querySelector(".input-key").value;
     let outputFields = parentDiv.querySelectorAll(".output-key");
+    if(inputKey in keyMapping || inputKey === "") return;
     keyMapping[inputKey] = [];
     for(let i =0; i<outputFields.length; i++){
       keyMapping[inputKey].push({key: outputFields[i].value, keycode: outputFields[i].getAttribute("keycode")});
@@ -93,6 +96,20 @@ function createOutputField(){
   return outputKey;
 }
 
+function setInputInterval(){
+  if(inputIntervalId !== null) clearInterval(inputIntervalId);
+  inputIntervalId = setInterval(()=>{
+    chrome.tabs.query(
+      { active: true, currentWindow: true },
+      function (tabs) {
+        chrome.tabs.sendMessage(tabs[0].id, {
+          action: ACTIONS.POPUP_IN_INPUT_FIELD,
+        });
+      }
+    );
+  }, 100);
+}
+
 function addNewMapping() {
   let mappingDiv = document.getElementById("mapping-space");
   let newMapping = document.createElement("div");
@@ -105,8 +122,16 @@ function addNewMapping() {
   inputKey.type = "text";
   inputKey.classList.add("input-key");
   inputKey.onkeydown = (event)=>{
-    event.preventDefault();
+    //event.preventDefault();
+    updateMapping();
   };
+  inputKey.addEventListener('focus', function() {
+    setInputInterval();    
+  });
+  inputKey.addEventListener('blur', function() {
+    clearInterval(inputIntervalId);
+    inputIntervalId = null;
+  });
   newMapping.appendChild(inputKeyLabel);
   newMapping.appendChild(inputKey);
 
@@ -135,21 +160,15 @@ function addNewMapping() {
 }
 
 function connectDevice(){
-  chrome.runtime.sendMessage({
-    action: ACTIONS.REQUEST_DEVICE,
-  });
-}
-
-
-function closePopup(){
   chrome.tabs.query(
     { active: true, currentWindow: true },
     function (tabs) {
       chrome.tabs.sendMessage(tabs[0].id, {
-        action: ACTIONS.POPUP_CLOSE,
+        action: ACTIONS.REQUEST_DEVICE,
       });
     }
   );
+  console.log("connect button clicked");
 }
 
 window.addEventListener("load", () => {
@@ -159,22 +178,9 @@ window.addEventListener("load", () => {
     document
     .getElementById("connect-device-button")
     .addEventListener("click", connectDevice);
-    document
-    .getElementById("close-popup-button")
-    .addEventListener("click", closePopup);
   createMapping();
   updateMapping();
-  chrome.tabs.query(
-    { active: true, currentWindow: true },
-    function (tabs) {
-      chrome.tabs.sendMessage(tabs[0].id, {
-        action: ACTIONS.POPUP_OPEN,
-      });
-    }
-  );
 });
-
-window.addEventListener('beforeunload', closePopup);
 
 
 

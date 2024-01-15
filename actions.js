@@ -4,7 +4,6 @@ export const ACTIONS = {
     REFRESH_PAGE : "refresh page",
     TAB: "tab pressed",
     REQUEST_DEVICE: "request device",
-    POPUP_OPEN: "popup open",
-    POPUP_CLOSE: "popup close",
+    POPUP_IN_INPUT_FIELD: "popup in input field",
     INPUT_KEY_PRESSED: "input key pressed"
 }

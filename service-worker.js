@@ -4,7 +4,8 @@ let keyMapping = {};
 const KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE =
   "footPedalKeyMappingBackGround";
 
-async function sendCommand(tabs, key) {
+// send command and return a promise, the promise is resolved when sending command is done to do clean up
+function sendCommand(tabs, key) {
   return new Promise((resolve, reject) => {
     chrome.debugger.sendCommand(
       { tabId: tabs[0].id },
@@ -31,14 +32,19 @@ chrome.runtime.onMessage.addListener(async function (
   sendResponse
 ) {
   console.log(message);
+  // update the keymapping based on the object from the popup
   if (message.action == ACTIONS.UPDATE_KEY_MAPPING) {
     keyMapping = message.keyMapping;
-    //chrome.storage.local.set({ 'footPedalKeyMappingBackGround': keyMapping });
-    chrome.storage.local
-      .set({ KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE: keyMapping })
-      .then(() => {});
+    //localStorage.setItem(KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE, JSON.stringify(keyMapping));
+    // chrome.storage.local
+    //   .set({ KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE: keyMapping })
+    //   .then(() => {});
+      chrome.storage.local.set({ footPedalKeyMappingBackGround: keyMapping }, function() {
+        console.log('Data saved in chrome.storage.local from service worker');
+      });
     return;
   }
+  // a key pressed, process the request
   if (message.action == ACTIONS.KEY_EVENT) {
     let outputKeys = keyMapping[message.key];
     if (!(Array.isArray(outputKeys) && outputKeys.length > 0)) return;
@@ -94,3 +100,8 @@ chrome.runtime.onMessage.addListener(async function (
     });
   }
 });
+
+chrome.storage.local.get(KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE, function(result) {
+    keyMapping = result[KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE];
+  });
+if(keyMapping === undefined) keyMapping = {};
