@@ -30,9 +30,9 @@ function createMapping() {
           outputField.value = outputKeys[0].key;
           outputField.setAttribute("keycode", outputKeys[0].keycode);
           for(let i=1; i<outputKeys.length; i++){
-            let newOutputField = addOutputField(mapping);
+            let newOutputField = addOutputField(mapping.querySelector(".output-container"));
             newOutputField.value = outputKeys[i].key;
-            newOutputField.setAttribute("keycode", outputKeys[0].keycode);
+            newOutputField.setAttribute("keycode", outputKeys[i].keycode);
           }
         }
       }
@@ -75,10 +75,7 @@ function deleteMapping(event) {
 function addOutputField(parentDiv) {
   let fields = parentDiv.getElementsByClassName("output-key");
   let outputField = createOutputField();
-  if (fields.length > 0) {
-    let lastOutputField = fields[fields.length - 1];
-    parentDiv.insertBefore(outputField, lastOutputField.nextSibling);
-  }
+  parentDiv.appendChild(outputField);
   return outputField;
 }
 
@@ -116,7 +113,7 @@ function addNewMapping() {
   newMapping.classList.add("key-mapping");
 
   let inputKeyLabel = document.createElement("label");
-  inputKeyLabel.innerHTML = "number:";
+  inputKeyLabel.innerHTML = "input:";
   inputKeyLabel.classList.add("input-key-label");
   let inputKey = document.createElement("input");
   inputKey.type = "text";
@@ -136,11 +133,14 @@ function addNewMapping() {
   newMapping.appendChild(inputKey);
 
   let outputKeyLabel = document.createElement("label");
-  outputKeyLabel.innerHTML = "char:";
+  outputKeyLabel.innerHTML = "output:";
   outputKeyLabel.classList.add("output-key-label");
+  let outputContainer = document.createElement("div");
+  outputContainer.classList.add("output-container");
   let outputKey = createOutputField();
   newMapping.appendChild(outputKeyLabel);
-  newMapping.appendChild(outputKey);
+  outputContainer.appendChild(outputKey);
+  newMapping.appendChild(outputContainer);
 
   let addFieldButton = document.createElement("button");
   addFieldButton.innerHTML = "+";
@@ -154,7 +154,7 @@ function addNewMapping() {
 
   mappingDiv.appendChild(newMapping);
   //inputKey.addEventListener("input", updateMapping);
-  addFieldButton.addEventListener("click", (event)=>{addOutputField(event.target.parentNode);});
+  addFieldButton.addEventListener("click", (event)=>{addOutputField(event.target.parentNode.querySelector(".output-container"));});
   deleteButton.addEventListener("click", deleteMapping);
   return newMapping;
 }

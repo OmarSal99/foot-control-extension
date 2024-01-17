@@ -1,33 +1,60 @@
-
 button {
-    border-radius: 5px;
-    margin: 3px;
-    background-color: #007bff;
-    color: white;
-    border: 1px solid black;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    cursor: pointer;
+  border-radius: 5px;
+  margin: 3px;
+  background-color: #007bff;
+  color: white;
+  border: 1px solid black;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
 }
 
-button:hover {
-    background-color: #0056b3;
+body{
+    height: fit-content;
+}
+
+.key-mapping{
+    display: inline-flex;
+    flex-direction: row;
+    align-items: flex-start;
+}
+
+.key-mapping:not(:last-child) {
+    margin-bottom: 5px; 
   }
 
+.output-container {
+  display: flex;
+  flex-wrap: wrap;
+  width: 130px;
+}
+
+.output-container > .output-key {
+  width: 30%; /* Adjust the width as per your layout */
+  margin: 0;
+}
+
+/* Create a new row for every 3rd element */
+.output-container > .output-key:nth-child(3n) {
+  margin-right: 0;
+}
+button:hover {
+  background-color: #0056b3;
+}
+
 .input-key {
-    width: 40px;
+  width: 40px;
 }
 
 .output-key {
-    width: 40px;
+  width: 40px;
 }
 
-.input-key-label{
-    padding-left: 2px;
-    padding-right: 2px;
+.input-key-label {
+  padding-left: 2px;
+  padding-right: 2px;
 }
 
-.output-key-label{
-    padding-left: 2px;
-    padding-right: 2px;
+.output-key-label {
+  padding-left: 2px;
+  padding-right: 2px;
 }
-
