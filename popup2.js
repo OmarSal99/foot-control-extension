@@ -1,4 +1,4 @@
-import { ACTIONS } from "./actions";
+import { ACTIONS } from "./actions.js";
 document.addEventListener("DOMContentLoaded", function () {
   document.getElementById("myButton").addEventListener("click", async () => {
     await navigator.hid
