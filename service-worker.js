@@ -46,13 +46,11 @@ chrome.runtime.onMessage.addListener(async function (
   sendResponse
 ) {
   console.log(message);
+  const devices = await navigator.hid.getDevices();
+  console.log("devices are", devices);
   // update the keymapping based on the object from the popup
   if (message.action == ACTIONS.UPDATE_KEY_MAPPING) {
     keyMapping = message.keyMapping;
-    //localStorage.setItem(KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE, JSON.stringify(keyMapping));
-    // chrome.storage.local
-    //   .set({ KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE: keyMapping })
-    //   .then(() => {});
     chrome.storage.local.set(
       { footPedalKeyMappingBackGround: keyMapping },
       function () {
@@ -132,8 +130,102 @@ chrome.runtime.onMessage.addListener(async function (
         await lastPromise;
       }
     );
+    return;
+  }
+  if (message.action == ACTIONS.DEVICE_PERM_UPDATED) {
+    const devicesWithPermissions = await navigator.hid.getDevices();
+    deviceToBind = devicesWithPermissions.filter((deviceElement) => {
+      return (
+        deviceElement.productId == message.productId &&
+        deviceElement.vendorId == message.vendorId
+      );
+    })[0];
+    try {
+        await deviceToBind.open();
+        bindDeviceEntry(deviceToBind);
+      } catch (error) {
+        console.error("Failed to open HID device");
+      }
   }
 });
+
+function handleKeyInput(key) {
+    if (chrome.runtime?.id) {
+      console.log("from inside!!");
+      if (forwardInputToPopup) {
+        chrome.runtime.sendMessage({
+          action: ACTIONS.INPUT_KEY_PRESSED,
+          key: key,
+        });
+      } else {
+        chrome.runtime.sendMessage({
+          action: ACTIONS.KEY_EVENT,
+          key: key,
+        });
+      }
+    }
+  }
+
+const gamepadControllerEntryHandler = (function () {
+    let lastEntryTime = 0;
+    const onHIDEntry = (event) => {
+      const { data, device, reportId } = event;
+      let uint8Array = new Uint8Array(data.buffer);
+      const base64String = btoa(String.fromCharCode.apply(null, uint8Array));
+      // The following strings within the condition represent neutral entries by the device
+      if (
+        base64String !== "f39/f38PAMA=" &&
+        base64String !== "f39+f38PAMA=" &&
+        base64String !== "f3+Af38PAMA=" &&
+        base64String !== "f399f38PAMA=" &&
+        base64String !== "f3+Bf38PAMA=" &&
+        base64String !== "f3+Cf38PAMA="
+      ) {
+        const currentTime = new Date().getTime();
+        if (currentTime - lastEntryTime > 1000) {
+          console.log("Different entry");
+          console.log(base64String);
+          uint8Array[2] = 127;
+          console.log(base64String);
+          console.log(uint8Array);
+          lastEntryTime = currentTime;
+          handleKeyInput(base64String);
+        }
+      }
+    };
+    return {
+      onHIDEntry,
+    };
+  })();
+  
+  // HID devices supported
+  const DEVICES_LIST = [
+    Object.freeze({
+      device: "hpMouse",
+      vendorId: 0x03f0,
+      productId: 0x0150,
+      usagePage: 0x0001,
+    }),
+    Object.freeze({
+      device: "joystick",
+      vendorId: 0x0079,
+      productId: 0x0006,
+      usagePage: 0x0001,
+      entryHandler: gamepadControllerEntryHandler.onHIDEntry,
+    }),
+  ];
+
+const bindDeviceEntry = (hidDevice) => {
+    const deviceUnderUse = DEVICES_LIST.filter((deviceElement) => {
+      return (
+        deviceElement.productId == hidDevice.productId &&
+        deviceElement.vendorId == hidDevice.vendorId
+      );
+    })[0];
+    hidDevice.addEventListener("inputreport", (event) => {
+      deviceUnderUse.entryHandler(event);
+    });
+  };
 
 chrome.storage.local.get(
   KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE,

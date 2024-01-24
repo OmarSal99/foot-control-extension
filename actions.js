@@ -5,5 +5,6 @@ export const ACTIONS = {
     TAB: "tab pressed",
     REQUEST_DEVICE: "request device",
     POPUP_IN_INPUT_FIELD: "popup in input field",
-    INPUT_KEY_PRESSED: "input key pressed"
+    INPUT_KEY_PRESSED: "input key pressed",
+    DEVICE_PERM_UPDATED: "device permission updated",
 }

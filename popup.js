@@ -6,7 +6,7 @@ const LOCAL_STORAGE_ORDER_LIST = "footPedalOrderList";
 let keyMapping = {};
 let orderList = [];
 
-let inputIntervalId  = null;
+let inputIntervalId = null;
 
 function isObjectEmpty(obj) {
   return Object.keys(obj).length === 0 && obj.constructor === Object;
@@ -15,12 +15,14 @@ function isObjectEmpty(obj) {
 function createMapping() {
   if (isObjectEmpty(keyMapping)) {
     let storedObjectString = localStorage.getItem(LOCAL_STORAGE_KEY_MAPPING);
-    let storedOrderList = JSON.parse(localStorage.getItem(LOCAL_STORAGE_ORDER_LIST));
+    let storedOrderList = JSON.parse(
+      localStorage.getItem(LOCAL_STORAGE_ORDER_LIST)
+    );
     orderList = storedOrderList !== null ? storedOrderList : [];
-    if (storedObjectString !== null ) {
+    if (storedObjectString !== null) {
       keyMapping = JSON.parse(storedObjectString);
       console.log(keyMapping);
-      for(let i=0;i < orderList.length; i++){
+      for (let i = 0; i < orderList.length; i++) {
         if (keyMapping.hasOwnProperty(orderList[i])) {
           let outputKeys = keyMapping[orderList[i]];
           if (Array.isArray(outputKeys) && outputKeys.length === 0) continue;
@@ -29,8 +31,10 @@ function createMapping() {
           let outputField = mapping.querySelector(".output-key");
           outputField.value = outputKeys[0].key;
           outputField.setAttribute("keycode", outputKeys[0].keycode);
-          for(let i=1; i<outputKeys.length; i++){
-            let newOutputField = addOutputField(mapping.querySelector(".output-container"));
+          for (let i = 1; i < outputKeys.length; i++) {
+            let newOutputField = addOutputField(
+              mapping.querySelector(".output-container")
+            );
             newOutputField.value = outputKeys[i].key;
             newOutputField.setAttribute("keycode", outputKeys[i].keycode);
           }
@@ -49,14 +53,17 @@ function updateMapping() {
   Array.from(keyMappingList).forEach(function (parentDiv) {
     let inputKey = parentDiv.querySelector(".input-key").value;
     let outputFields = parentDiv.querySelectorAll(".output-key");
-    if(inputKey in keyMapping || inputKey === "") return;
+    if (inputKey in keyMapping || inputKey === "") return;
     keyMapping[inputKey] = [];
-    for(let i =0; i<outputFields.length; i++){
-      keyMapping[inputKey].push({key: outputFields[i].value, keycode: outputFields[i].getAttribute("keycode")});
+    for (let i = 0; i < outputFields.length; i++) {
+      keyMapping[inputKey].push({
+        key: outputFields[i].value,
+        keycode: outputFields[i].getAttribute("keycode"),
+      });
     }
     orderList.push(inputKey);
   });
-  localStorage.setItem(LOCAL_STORAGE_ORDER_LIST, JSON.stringify(orderList))
+  localStorage.setItem(LOCAL_STORAGE_ORDER_LIST, JSON.stringify(orderList));
   localStorage.setItem(LOCAL_STORAGE_KEY_MAPPING, JSON.stringify(keyMapping));
   chrome.runtime.sendMessage({
     action: ACTIONS.UPDATE_KEY_MAPPING,
@@ -71,7 +78,6 @@ function deleteMapping(event) {
   updateMapping();
 }
 
-
 function addOutputField(parentDiv) {
   let fields = parentDiv.getElementsByClassName("output-key");
   let outputField = createOutputField();
@@ -79,31 +85,31 @@ function addOutputField(parentDiv) {
   return outputField;
 }
 
-function createOutputField(){
+function createOutputField() {
   let outputKey = document.createElement("input");
   outputKey.type = "text";
   outputKey.classList.add("output-key");
   outputKey.setAttribute("keycode", "");
-  outputKey.onkeydown = function(event) {
+  outputKey.onkeydown = function (event) {
     outputKey.value = event.key;
-    outputKey.setAttribute("keycode", event.key.match(/^[a-z]$/) ? event.key.charCodeAt(0) : event.keyCode);
+    outputKey.setAttribute(
+      "keycode",
+      event.key.match(/^[a-z]$/) ? event.key.charCodeAt(0) : event.keyCode
+    );
     event.preventDefault();
     updateMapping();
-};
+  };
   return outputKey;
 }
 
-function setInputInterval(){
-  if(inputIntervalId !== null) clearInterval(inputIntervalId);
-  inputIntervalId = setInterval(()=>{
-    chrome.tabs.query(
-      { active: true, currentWindow: true },
-      function (tabs) {
-        chrome.tabs.sendMessage(tabs[0].id, {
-          action: ACTIONS.POPUP_IN_INPUT_FIELD,
-        });
-      }
-    );
+function setInputInterval() {
+  if (inputIntervalId !== null) clearInterval(inputIntervalId);
+  inputIntervalId = setInterval(() => {
+    chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+      chrome.tabs.sendMessage(tabs[0].id, {
+        action: ACTIONS.POPUP_IN_INPUT_FIELD,
+      });
+    });
   }, 100);
 }
 
@@ -118,14 +124,14 @@ function addNewMapping() {
   let inputKey = document.createElement("input");
   inputKey.type = "text";
   inputKey.classList.add("input-key");
-  inputKey.onkeydown = (event)=>{
+  inputKey.onkeydown = (event) => {
     //event.preventDefault();
     updateMapping();
   };
-  inputKey.addEventListener('focus', function() {
-    setInputInterval();    
+  inputKey.addEventListener("focus", function () {
+    setInputInterval();
   });
-  inputKey.addEventListener('blur', function() {
+  inputKey.addEventListener("blur", function () {
     clearInterval(inputIntervalId);
     inputIntervalId = null;
   });
@@ -153,47 +159,50 @@ function addNewMapping() {
   newMapping.appendChild(deleteButton);
 
   mappingDiv.appendChild(newMapping);
-  //inputKey.addEventListener("input", updateMapping);
-  addFieldButton.addEventListener("click", (event)=>{addOutputField(event.target.parentNode.querySelector(".output-container"));});
+  addFieldButton.addEventListener("click", (event) => {
+    addOutputField(event.target.parentNode.querySelector(".output-container"));
+  });
   deleteButton.addEventListener("click", deleteMapping);
   return newMapping;
 }
 
-function connectDevice(){
-  chrome.tabs.query(
-    { active: true, currentWindow: true },
-    function (tabs) {
-      chrome.tabs.sendMessage(tabs[0].id, {
-        action: ACTIONS.REQUEST_DEVICE,
-      });
-    }
+function connectDevice() {
+  let version = parseInt(
+    /Chrome\/([0-9.]+)/.exec(navigator.userAgent)[1].match(/\d+/)[0],
+    10
   );
-  console.log("connect button clicked");
+  if (typeof version === "number" && version >= 117){
+    chrome.tabs.create({ url: chrome.runtime.getURL("popup2.html") });
+  }
+  else{
+    chrome.tabs.query(
+      { active: true, currentWindow: true },
+      function (tabs) {
+        chrome.tabs.sendMessage(tabs[0].id, {
+          action: ACTIONS.REQUEST_DEVICE,
+        });
+      }
+    );  
+  }
 }
 
 window.addEventListener("load", () => {
   document
     .getElementById("add-button")
     .addEventListener("click", addNewMapping);
-    document
+  document
     .getElementById("connect-device-button")
     .addEventListener("click", connectDevice);
   createMapping();
   updateMapping();
 });
 
-
-
-chrome.runtime.onMessage.addListener(function (
-  message,
-  sender,
-  sendResponse
-) {
+chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   if (message.action == ACTIONS.INPUT_KEY_PRESSED) {
     let focusedInput = document.activeElement;
-    if (focusedInput.classList.contains("input-key")){
+    if (focusedInput.classList.contains("input-key")) {
       focusedInput.value = message.key;
       updateMapping();
     }
   }
-})
+});
