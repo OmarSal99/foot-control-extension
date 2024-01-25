@@ -13,6 +13,5 @@ document.addEventListener("DOMContentLoaded", function () {
       .catch((error) => {
         console.error("Error connecting to HID device:", error);
       });
-    window.close();
   });
 });

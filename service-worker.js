@@ -68,7 +68,7 @@ chrome.runtime.onMessage.addListener(async function (
   }
   // a key pressed, process the request
   else if (message.action == ACTIONS.KEY_EVENT) {
-    handleKeyInput(message);
+    await handleKeyInput(message);
   } else if (message.action == ACTIONS.DEVICE_PERM_UPDATED) {
     connectDevice(message.productId, message.vendorId);
   } else if (message.action == ACTIONS.POPUP_IN_INPUT_FIELD) {
@@ -77,7 +77,7 @@ chrome.runtime.onMessage.addListener(async function (
   }
 });
 
-function handleKeyInput(message){
+async function handleKeyInput(message){
     if (forwardInputToPopup) {
         chrome.runtime.sendMessage({
           action: ACTIONS.INPUT_KEY_PRESSED,
@@ -157,7 +157,7 @@ function handleKeyInput(message){
       return;
 }
 
-function connectDevice(productId, vendorId) {
+async function connectDevice(productId, vendorId) {
   let device = undefined;
   for (let i = 0; i < DEVICES_LIST.length; i++) {
     if (DEVICES_LIST[i].driver.filter(productId, vendorId)) {
@@ -177,7 +177,7 @@ function connectDevice(productId, vendorId) {
       console.log("Data saved in chrome.storage.local from service worker");
     }
   );
-  device.driver.open(handleKeyInput);
+  await device.driver.open(handleKeyInput);
 }
 
 function startPopupTimer() {
