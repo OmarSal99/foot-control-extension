@@ -23,13 +23,13 @@ export class GamepadDriver extends BaseDriver {
       base64String !== "f3+Cf38PAMA="
     ) {
       const currentTime = new Date().getTime();
-      if (currentTime - TouchList.lastEntryTime > 1000) {
+      if (currentTime - this.lastEntryTime > 1000) {
         console.log("Different entry");
         console.log(base64String);
         uint8Array[2] = 127;
         console.log(base64String);
         console.log(uint8Array);
-        TouchList.lastEntryTime = currentTime;
+        this.lastEntryTime = currentTime;
         callbackFunction({key: base64String});
       }
     }
