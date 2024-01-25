@@ -12,11 +12,11 @@ export class BaseDriver {
   };
   open = async () => {
     const devicesWithPermissions = await navigator.hid.getDevices();
-    deviceToBind = devicesWithPermissions.filter((deviceElement) => {
+    let device = devicesWithPermissions.filter((deviceElement) => {
         return this.filter(deviceElement.productId, deviceElement.vendorId);
       })[0];
-    await deviceToBind.open();
-    hidDevice.addEventListener("inputreport", (event) => {
+    await device.open();
+    device.addEventListener("inputreport", (event) => {
       this.entryHandler(event);
     });
   };
