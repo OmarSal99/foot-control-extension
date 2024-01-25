@@ -10,21 +10,14 @@ export class BaseDriver {
       vendorId == this.vendorId
     );
   };
-  open = async () => {
+  open = async (callbackFunction) => {
     const devicesWithPermissions = await navigator.hid.getDevices();
     let device = devicesWithPermissions.filter((deviceElement) => {
         return this.filter(deviceElement.productId, deviceElement.vendorId);
       })[0];
     await device.open();
     device.addEventListener("inputreport", (event) => {
-      this.entryHandler(event);
-    });
-  };
-
-  handleKeyInput = (key) => {
-    chrome.runtime.sendMessage({
-      action: ACTIONS.KEY_EVENT,
-      key: key,
+      this.entryHandler(event, callbackFunction);
     });
   };
 }

@@ -68,83 +68,7 @@ chrome.runtime.onMessage.addListener(async function (
   }
   // a key pressed, process the request
   else if (message.action == ACTIONS.KEY_EVENT) {
-    if (forwardInputToPopup) {
-      chrome.runtime.sendMessage({
-        action: ACTIONS.INPUT_KEY_PRESSED,
-        key: message.key,
-      });
-      return;
-    }
-    let outputKeys = keyMapping[message.key];
-    if (!(Array.isArray(outputKeys) && outputKeys.length > 0)) return;
-    chrome.tabs.query(
-      { active: true, currentWindow: true },
-      async function (tabs) {
-        let i = 0;
-        let lastPromise = null;
-        for (i = 0; i < outputKeys.length; i++) {
-          let key = outputKeys[i].key;
-          let keycode = parseInt(outputKeys[i].keycode, 10);
-          let myId = idCounter++;
-          let process = async (key, keycode, myId) => {
-            let promise = null;
-            debuggerQueue.push(myId);
-            let timeStarted = new Date().getTime();
-            let numberOfLoops = 0;
-            while (isLocked || debuggerQueue[0] != myId) {
-              if (
-                numberOfLoops > MAX_LOOPS ||
-                timeStarted + MAX_WAITING_TIME < new Date().getTime()
-              ) {
-                console.log("enter special case !!!");
-                try {
-                  debuggerQueue.splice(debuggerQueue.indexOf(myId), 1);
-                } catch {}
-                return;
-              }
-              await sendingOutput;
-              numberOfLoops++;
-            }
-            isLocked = true;
-            debuggerQueue.shift();
-            if (key.length === 1) {
-              promise = sendCommand(tabs, keycode);
-            } else {
-              switch (key) {
-                case "F5":
-                  console.log("refresh page !");
-                  promise = new Promise((resolve, reject) => {
-                    chrome.tabs.sendMessage(tabs[0].id, {
-                      action: ACTIONS.REFRESH_PAGE,
-                    });
-                    resolve();
-                  });
-                  break;
-                case "Tab":
-                  console.log("tab pressed !");
-                  promise = new Promise((resolve, reject) => {
-                    chrome.tabs.sendMessage(tabs[0].id, {
-                      action: ACTIONS.TAB,
-                    });
-                    resolve();
-                  });
-                  break;
-                default:
-                  break;
-              }
-            }
-            if (i + 1 == outputKeys.length) lastPromise = promise;
-            sendingOutput = promise;
-            await promise;
-            isLocked = false;
-          };
-          process(key, keycode, myId);
-        }
-        //ignore the error, it's a promise but ide don't think so
-        await lastPromise;
-      }
-    );
-    return;
+    handleKeyInput(message);
   } else if (message.action == ACTIONS.DEVICE_PERM_UPDATED) {
     connectDevice(message.productId, message.vendorId);
   } else if (message.action == ACTIONS.POPUP_IN_INPUT_FIELD) {
@@ -152,6 +76,86 @@ chrome.runtime.onMessage.addListener(async function (
     startPopupTimer();
   }
 });
+
+function handleKeyInput(message){
+    if (forwardInputToPopup) {
+        chrome.runtime.sendMessage({
+          action: ACTIONS.INPUT_KEY_PRESSED,
+          key: message.key,
+        });
+        return;
+      }
+      let outputKeys = keyMapping[message.key];
+      if (!(Array.isArray(outputKeys) && outputKeys.length > 0)) return;
+      chrome.tabs.query(
+        { active: true, currentWindow: true },
+        async function (tabs) {
+          let i = 0;
+          let lastPromise = null;
+          for (i = 0; i < outputKeys.length; i++) {
+            let key = outputKeys[i].key;
+            let keycode = parseInt(outputKeys[i].keycode, 10);
+            let myId = idCounter++;
+            let process = async (key, keycode, myId) => {
+              let promise = null;
+              debuggerQueue.push(myId);
+              let timeStarted = new Date().getTime();
+              let numberOfLoops = 0;
+              while (isLocked || debuggerQueue[0] != myId) {
+                if (
+                  numberOfLoops > MAX_LOOPS ||
+                  timeStarted + MAX_WAITING_TIME < new Date().getTime()
+                ) {
+                  console.log("enter special case !!!");
+                  try {
+                    debuggerQueue.splice(debuggerQueue.indexOf(myId), 1);
+                  } catch {}
+                  return;
+                }
+                await sendingOutput;
+                numberOfLoops++;
+              }
+              isLocked = true;
+              debuggerQueue.shift();
+              if (key.length === 1) {
+                promise = sendCommand(tabs, keycode);
+              } else {
+                switch (key) {
+                  case "F5":
+                    console.log("refresh page !");
+                    promise = new Promise((resolve, reject) => {
+                      chrome.tabs.sendMessage(tabs[0].id, {
+                        action: ACTIONS.REFRESH_PAGE,
+                      });
+                      resolve();
+                    });
+                    break;
+                  case "Tab":
+                    console.log("tab pressed !");
+                    promise = new Promise((resolve, reject) => {
+                      chrome.tabs.sendMessage(tabs[0].id, {
+                        action: ACTIONS.TAB,
+                      });
+                      resolve();
+                    });
+                    break;
+                  default:
+                    break;
+                }
+              }
+              if (i + 1 == outputKeys.length) lastPromise = promise;
+              sendingOutput = promise;
+              await promise;
+              isLocked = false;
+            };
+            process(key, keycode, myId);
+          }
+          //ignore the error, it's a promise but ide don't think so
+          await lastPromise;
+        }
+      );
+      return;
+}
 
 function connectDevice(productId, vendorId) {
   let device = undefined;

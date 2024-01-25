@@ -9,7 +9,7 @@ export class GamepadDriver extends BaseDriver {
     this.lastEntryTime = 0;
   }
 
-  entryHandler = (event) => {
+  entryHandler = (event, callbackFunction) => {
     const { data, device, reportId } = event;
     let uint8Array = new Uint8Array(data.buffer);
     const base64String = btoa(String.fromCharCode.apply(null, uint8Array));
@@ -30,7 +30,7 @@ export class GamepadDriver extends BaseDriver {
         console.log(base64String);
         console.log(uint8Array);
         TouchList.lastEntryTime = currentTime;
-        this.handleKeyInput(base64String);
+        callbackFunction(base64String);
       }
     }
   };
