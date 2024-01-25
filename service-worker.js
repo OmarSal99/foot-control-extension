@@ -1,4 +1,5 @@
 import { ACTIONS } from "./actions.js";
+import { DEVICES_LIST } from "./Drivers/devices-list.js";
 let keyMapping = {};
 let debuggerQueue = [];
 
@@ -9,7 +10,11 @@ const MAX_WAITING_TIME = 3000;
 const MAX_LOOPS = 1000;
 
 const KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE =
-  "footPedalKeyMappingBackGround";
+  "foot pedal key mapping service-worker";
+const LAST_CONNECTED_DEVICE_LOCAL_STORAGE_KEY = "last connnected HID device";
+
+let popupTimer = undefined;
+let forwardInputToPopup = false;
 let sendingOutput = null;
 let isLocked = false;
 let idCounter = 0;
@@ -51,8 +56,10 @@ chrome.runtime.onMessage.addListener(async function (
   // update the keymapping based on the object from the popup
   if (message.action == ACTIONS.UPDATE_KEY_MAPPING) {
     keyMapping = message.keyMapping;
+    let storageObject = {};
+    storageObject[KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE]=keyMapping;
     chrome.storage.local.set(
-      { footPedalKeyMappingBackGround: keyMapping },
+      storageObject,
       function () {
         console.log("Data saved in chrome.storage.local from service worker");
       }
@@ -60,7 +67,14 @@ chrome.runtime.onMessage.addListener(async function (
     return;
   }
   // a key pressed, process the request
-  if (message.action == ACTIONS.KEY_EVENT) {
+  else if (message.action == ACTIONS.KEY_EVENT) {
+    if (forwardInputToPopup) {
+      chrome.runtime.sendMessage({
+        action: ACTIONS.INPUT_KEY_PRESSED,
+        key: message.key,
+      });
+      return;
+    }
     let outputKeys = keyMapping[message.key];
     if (!(Array.isArray(outputKeys) && outputKeys.length > 0)) return;
     chrome.tabs.query(
@@ -131,101 +145,48 @@ chrome.runtime.onMessage.addListener(async function (
       }
     );
     return;
-  }
-  if (message.action == ACTIONS.DEVICE_PERM_UPDATED) {
-    const devicesWithPermissions = await navigator.hid.getDevices();
-    deviceToBind = devicesWithPermissions.filter((deviceElement) => {
-      return (
-        deviceElement.productId == message.productId &&
-        deviceElement.vendorId == message.vendorId
-      );
-    })[0];
-    try {
-        await deviceToBind.open();
-        bindDeviceEntry(deviceToBind);
-      } catch (error) {
-        console.error("Failed to open HID device");
-      }
+  } else if (message.action == ACTIONS.DEVICE_PERM_UPDATED) {
+    connectDevice(message.productId, message.vendorId);
+  } else if (message.action == ACTIONS.POPUP_IN_INPUT_FIELD) {
+    forwardInputToPopup = true;
+    startPopupTimer();
   }
 });
 
-function handleKeyInput(key) {
-    if (chrome.runtime?.id) {
-      console.log("from inside!!");
-      if (forwardInputToPopup) {
-        chrome.runtime.sendMessage({
-          action: ACTIONS.INPUT_KEY_PRESSED,
-          key: key,
-        });
-      } else {
-        chrome.runtime.sendMessage({
-          action: ACTIONS.KEY_EVENT,
-          key: key,
-        });
-      }
+function connectDevice(productId, vendorId) {
+  let device = undefined;
+  for (let i = 0; i < DEVICES_LIST.length; i++) {
+    if (DEVICES_LIST[i].driver.filter(productId, vendorId)) {
+      device = DEVICES_LIST[i];
+      break;
     }
   }
+  if (device === undefined) {
+    console.log("unable to find device in the devices-list");
+    return;
+  }
+  let storageObject = {};
+  storageObject[LAST_CONNECTED_DEVICE_LOCAL_STORAGE_KEY] = {productId: productId, vendorId: vendorId};
+  chrome.storage.local.set(
+    storageObject,
+    function () {
+      console.log("Data saved in chrome.storage.local from service worker");
+    }
+  );
+  device.driver.open();
+}
 
-const gamepadControllerEntryHandler = (function () {
-    let lastEntryTime = 0;
-    const onHIDEntry = (event) => {
-      const { data, device, reportId } = event;
-      let uint8Array = new Uint8Array(data.buffer);
-      const base64String = btoa(String.fromCharCode.apply(null, uint8Array));
-      // The following strings within the condition represent neutral entries by the device
-      if (
-        base64String !== "f39/f38PAMA=" &&
-        base64String !== "f39+f38PAMA=" &&
-        base64String !== "f3+Af38PAMA=" &&
-        base64String !== "f399f38PAMA=" &&
-        base64String !== "f3+Bf38PAMA=" &&
-        base64String !== "f3+Cf38PAMA="
-      ) {
-        const currentTime = new Date().getTime();
-        if (currentTime - lastEntryTime > 1000) {
-          console.log("Different entry");
-          console.log(base64String);
-          uint8Array[2] = 127;
-          console.log(base64String);
-          console.log(uint8Array);
-          lastEntryTime = currentTime;
-          handleKeyInput(base64String);
-        }
-      }
-    };
-    return {
-      onHIDEntry,
-    };
-  })();
-  
-  // HID devices supported
-  const DEVICES_LIST = [
-    Object.freeze({
-      device: "hpMouse",
-      vendorId: 0x03f0,
-      productId: 0x0150,
-      usagePage: 0x0001,
-    }),
-    Object.freeze({
-      device: "joystick",
-      vendorId: 0x0079,
-      productId: 0x0006,
-      usagePage: 0x0001,
-      entryHandler: gamepadControllerEntryHandler.onHIDEntry,
-    }),
-  ];
+function startPopupTimer() {
+  // Clear the existing timer (if any)
+  clearTimeout(popupTimer);
 
-const bindDeviceEntry = (hidDevice) => {
-    const deviceUnderUse = DEVICES_LIST.filter((deviceElement) => {
-      return (
-        deviceElement.productId == hidDevice.productId &&
-        deviceElement.vendorId == hidDevice.vendorId
-      );
-    })[0];
-    hidDevice.addEventListener("inputreport", (event) => {
-      deviceUnderUse.entryHandler(event);
-    });
-  };
+  // Set a new timer for 3 seconds
+  popupTimer = setTimeout(function () {
+    // Your function to be called after 3 seconds of inactivity
+    forwardInputToPopup = false;
+    console.log("popupclosed!");
+  }, 1000);
+}
 
 chrome.storage.local.get(
   KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE,
@@ -233,4 +194,16 @@ chrome.storage.local.get(
     keyMapping = result[KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE];
   }
 );
+
+chrome.storage.local.get(
+  LAST_CONNECTED_DEVICE_LOCAL_STORAGE_KEY,
+  function (result) {
+    if(result[LAST_CONNECTED_DEVICE_LOCAL_STORAGE_KEY] === undefined) return;
+    connectDevice(
+      result[LAST_CONNECTED_DEVICE_LOCAL_STORAGE_KEY].productId,
+      result[LAST_CONNECTED_DEVICE_LOCAL_STORAGE_KEY].vendorId
+    );
+  }
+);
+
 if (keyMapping === undefined) keyMapping = {};

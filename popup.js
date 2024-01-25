@@ -105,10 +105,8 @@ function createOutputField() {
 function setInputInterval() {
   if (inputIntervalId !== null) clearInterval(inputIntervalId);
   inputIntervalId = setInterval(() => {
-    chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
-      chrome.tabs.sendMessage(tabs[0].id, {
-        action: ACTIONS.POPUP_IN_INPUT_FIELD,
-      });
+    chrome.runtime.sendMessage({
+      action: ACTIONS.POPUP_IN_INPUT_FIELD
     });
   }, 100);
 }
