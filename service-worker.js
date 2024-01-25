@@ -18,6 +18,7 @@ let forwardInputToPopup = false;
 let sendingOutput = null;
 let isLocked = false;
 let idCounter = 0;
+let deviceName = undefined;
 // send command and return a promise, the promise is resolved when sending command is done to do clean up
 function sendCommand(tabs, key) {
   return new Promise((resolve, reject) => {
@@ -54,107 +55,114 @@ chrome.runtime.onMessage.addListener(async function (
   const devices = await navigator.hid.getDevices();
   console.log("devices are", devices);
   // update the keymapping based on the object from the popup
-  if (message.action == ACTIONS.UPDATE_KEY_MAPPING) {
-    keyMapping = message.keyMapping;
-    let storageObject = {};
-    storageObject[KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE]=keyMapping;
-    chrome.storage.local.set(
-      storageObject,
-      function () {
+  switch (message.action) {
+    case ACTIONS.UPDATE_KEY_MAPPING:
+      keyMapping = message.keyMapping;
+      let storageObject = {};
+      storageObject[KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE] = keyMapping;
+      chrome.storage.local.set(storageObject, function () {
         console.log("Data saved in chrome.storage.local from service worker");
-      }
-    );
-    return;
-  }
-  // a key pressed, process the request
-  else if (message.action == ACTIONS.KEY_EVENT) {
-    await handleKeyInput(message);
-  } else if (message.action == ACTIONS.DEVICE_PERM_UPDATED) {
-    connectDevice(message.productId, message.vendorId);
-  } else if (message.action == ACTIONS.POPUP_IN_INPUT_FIELD) {
-    forwardInputToPopup = true;
-    startPopupTimer();
+      });
+      break;
+
+    case ACTIONS.KEY_EVENT:
+      await handleKeyInput(message);
+      break;
+
+    case ACTIONS.DEVICE_PERM_UPDATED:
+      connectDevice(message.productId, message.vendorId);
+      break;
+
+    case ACTIONS.POPUP_IN_INPUT_FIELD:
+      forwardInputToPopup = true;
+      startPopupTimer();
+      break;
+    
+    case ACTIONS.GET_DEVICE_NAME:
+      sendResponse(deviceName);
+    default:
+      break;
   }
 });
 
-async function handleKeyInput(message){
-    if (forwardInputToPopup) {
-        chrome.runtime.sendMessage({
-          action: ACTIONS.INPUT_KEY_PRESSED,
-          key: message.key,
-        });
-        return;
-      }
-      let outputKeys = keyMapping[message.key];
-      if (!(Array.isArray(outputKeys) && outputKeys.length > 0)) return;
-      chrome.tabs.query(
-        { active: true, currentWindow: true },
-        async function (tabs) {
-          let i = 0;
-          let lastPromise = null;
-          for (i = 0; i < outputKeys.length; i++) {
-            let key = outputKeys[i].key;
-            let keycode = parseInt(outputKeys[i].keycode, 10);
-            let myId = idCounter++;
-            let process = async (key, keycode, myId) => {
-              let promise = null;
-              debuggerQueue.push(myId);
-              let timeStarted = new Date().getTime();
-              let numberOfLoops = 0;
-              while (isLocked || debuggerQueue[0] != myId) {
-                if (
-                  numberOfLoops > MAX_LOOPS ||
-                  timeStarted + MAX_WAITING_TIME < new Date().getTime()
-                ) {
-                  console.log("enter special case !!!");
-                  try {
-                    debuggerQueue.splice(debuggerQueue.indexOf(myId), 1);
-                  } catch {}
-                  return;
-                }
-                await sendingOutput;
-                numberOfLoops++;
-              }
-              isLocked = true;
-              debuggerQueue.shift();
-              if (key.length === 1) {
-                promise = sendCommand(tabs, keycode);
-              } else {
-                switch (key) {
-                  case "F5":
-                    console.log("refresh page !");
-                    promise = new Promise((resolve, reject) => {
-                      chrome.tabs.sendMessage(tabs[0].id, {
-                        action: ACTIONS.REFRESH_PAGE,
-                      });
-                      resolve();
-                    });
-                    break;
-                  case "Tab":
-                    console.log("tab pressed !");
-                    promise = new Promise((resolve, reject) => {
-                      chrome.tabs.sendMessage(tabs[0].id, {
-                        action: ACTIONS.TAB,
-                      });
-                      resolve();
-                    });
-                    break;
-                  default:
-                    break;
-                }
-              }
-              if (i + 1 == outputKeys.length) lastPromise = promise;
-              sendingOutput = promise;
-              await promise;
-              isLocked = false;
-            };
-            process(key, keycode, myId);
+async function handleKeyInput(message) {
+  if (forwardInputToPopup) {
+    chrome.runtime.sendMessage({
+      action: ACTIONS.INPUT_KEY_PRESSED,
+      key: message.key,
+    });
+    return;
+  }
+  let outputKeys = keyMapping[message.key];
+  if (!(Array.isArray(outputKeys) && outputKeys.length > 0)) return;
+  chrome.tabs.query(
+    { active: true, currentWindow: true },
+    async function (tabs) {
+      let i = 0;
+      let lastPromise = null;
+      for (i = 0; i < outputKeys.length; i++) {
+        let key = outputKeys[i].key;
+        let keycode = parseInt(outputKeys[i].keycode, 10);
+        let myId = idCounter++;
+        let process = async (key, keycode, myId) => {
+          let promise = null;
+          debuggerQueue.push(myId);
+          let timeStarted = new Date().getTime();
+          let numberOfLoops = 0;
+          while (isLocked || debuggerQueue[0] != myId) {
+            if (
+              numberOfLoops > MAX_LOOPS ||
+              timeStarted + MAX_WAITING_TIME < new Date().getTime()
+            ) {
+              console.log("enter special case !!!");
+              try {
+                debuggerQueue.splice(debuggerQueue.indexOf(myId), 1);
+              } catch {}
+              return;
+            }
+            await sendingOutput;
+            numberOfLoops++;
           }
-          //ignore the error, it's a promise but ide don't think so
-          await lastPromise;
-        }
-      );
-      return;
+          isLocked = true;
+          debuggerQueue.shift();
+          if (key.length === 1) {
+            promise = sendCommand(tabs, keycode);
+          } else {
+            switch (key) {
+              case "F5":
+                console.log("refresh page !");
+                promise = new Promise((resolve, reject) => {
+                  chrome.tabs.sendMessage(tabs[0].id, {
+                    action: ACTIONS.REFRESH_PAGE,
+                  });
+                  resolve();
+                });
+                break;
+              case "Tab":
+                console.log("tab pressed !");
+                promise = new Promise((resolve, reject) => {
+                  chrome.tabs.sendMessage(tabs[0].id, {
+                    action: ACTIONS.TAB,
+                  });
+                  resolve();
+                });
+                break;
+              default:
+                break;
+            }
+          }
+          if (i + 1 == outputKeys.length) lastPromise = promise;
+          sendingOutput = promise;
+          await promise;
+          isLocked = false;
+        };
+        process(key, keycode, myId);
+      }
+      //ignore the error, it's a promise but ide don't think so
+      await lastPromise;
+    }
+  );
+  return;
 }
 
 async function connectDevice(productId, vendorId) {
@@ -169,15 +177,20 @@ async function connectDevice(productId, vendorId) {
     console.log("unable to find device in the devices-list");
     return;
   }
-  let storageObject = {};
-  storageObject[LAST_CONNECTED_DEVICE_LOCAL_STORAGE_KEY] = {productId: productId, vendorId: vendorId};
-  chrome.storage.local.set(
-    storageObject,
-    function () {
-      console.log("Data saved in chrome.storage.local from service worker");
-    }
-  );
+//   let storageObject = {};
+//   storageObject[LAST_CONNECTED_DEVICE_LOCAL_STORAGE_KEY] = {
+//     productId: productId,
+//     vendorId: vendorId,
+//   };
+//   chrome.storage.local.set(storageObject, function () {
+//     console.log("Data saved in chrome.storage.local from service worker");
+//   });
   await device.driver.open(handleKeyInput);
+  deviceName = device.name;
+  chrome.runtime.sendMessage({
+    action: ACTIONS.DEVICE_CHANGED,
+    deviceName: deviceName,
+  });
 }
 
 function startPopupTimer() {
@@ -199,15 +212,15 @@ chrome.storage.local.get(
   }
 );
 
-chrome.storage.local.get(
-  LAST_CONNECTED_DEVICE_LOCAL_STORAGE_KEY,
-  function (result) {
-    if(result[LAST_CONNECTED_DEVICE_LOCAL_STORAGE_KEY] === undefined) return;
-    connectDevice(
-      result[LAST_CONNECTED_DEVICE_LOCAL_STORAGE_KEY].productId,
-      result[LAST_CONNECTED_DEVICE_LOCAL_STORAGE_KEY].vendorId
-    );
-  }
-);
+// chrome.storage.local.get(
+//   LAST_CONNECTED_DEVICE_LOCAL_STORAGE_KEY,
+//   function (result) {
+//     if (result[LAST_CONNECTED_DEVICE_LOCAL_STORAGE_KEY] === undefined) return;
+//     connectDevice(
+//       result[LAST_CONNECTED_DEVICE_LOCAL_STORAGE_KEY].productId,
+//       result[LAST_CONNECTED_DEVICE_LOCAL_STORAGE_KEY].vendorId
+//     );
+//   }
+// );
 
 if (keyMapping === undefined) keyMapping = {};

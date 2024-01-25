@@ -7,4 +7,6 @@ export const ACTIONS = {
     POPUP_IN_INPUT_FIELD: "popup in input field",
     INPUT_KEY_PRESSED: "input key pressed",
     DEVICE_PERM_UPDATED: "device permission updated",
+    GET_DEVICE_NAME: "get device name",
+    DEVICE_CHANGED: "device changed"
 }

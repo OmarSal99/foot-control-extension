@@ -18,20 +18,10 @@ function isSingleDigitNumber(str) {
 
 // inform other parts that a key is pressed,  if isPPopupOpen is true the message should be sent to it
 function handleKeyInput(key) {
-  if (chrome.runtime?.id) {
-    console.log("from inside!!");
-    if (forwardInputToPopup) {
-      chrome.runtime.sendMessage({
-        action: ACTIONS.INPUT_KEY_PRESSED,
-        key: key,
-      });
-    } else {
-      chrome.runtime.sendMessage({
+    chrome.runtime.sendMessage({
         action: ACTIONS.KEY_EVENT,
         key: key,
       });
-    }
-  }
 }
 
 

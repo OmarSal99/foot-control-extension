@@ -1,48 +1,50 @@
 import { ACTIONS } from "./actions.js";
 
-const LOCAL_STORAGE_KEY_MAPPING = "footPedalKeyMapping";
-const LOCAL_STORAGE_ORDER_LIST = "footPedalOrderList";
+const LOCAL_STORAGE_KEY_MAPPING = "foot pedal key mapping";
+const LOCAL_STORAGE_ORDER_LIST = "foot pedal order list";
 
 let keyMapping = {};
 let orderList = [];
 
+let deviceName = undefined;
 let inputIntervalId = null;
 
-function isObjectEmpty(obj) {
-  return Object.keys(obj).length === 0 && obj.constructor === Object;
-}
-
 function createMapping() {
-  if (isObjectEmpty(keyMapping)) {
-    let storedObjectString = localStorage.getItem(LOCAL_STORAGE_KEY_MAPPING);
-    let storedOrderList = JSON.parse(
-      localStorage.getItem(LOCAL_STORAGE_ORDER_LIST)
-    );
-    orderList = storedOrderList !== null ? storedOrderList : [];
-    if (storedObjectString !== null) {
-      keyMapping = JSON.parse(storedObjectString);
-      console.log(keyMapping);
-      for (let i = 0; i < orderList.length; i++) {
-        if (keyMapping.hasOwnProperty(orderList[i])) {
-          let outputKeys = keyMapping[orderList[i]];
-          if (Array.isArray(outputKeys) && outputKeys.length === 0) continue;
-          let mapping = addNewMapping();
-          mapping.querySelector(".input-key").value = orderList[i];
-          let outputField = mapping.querySelector(".output-key");
-          outputField.value = outputKeys[0].key;
-          outputField.setAttribute("keycode", outputKeys[0].keycode);
-          for (let i = 1; i < outputKeys.length; i++) {
-            let newOutputField = addOutputField(
-              mapping.querySelector(".output-container")
-            );
-            newOutputField.value = outputKeys[i].key;
-            newOutputField.setAttribute("keycode", outputKeys[i].keycode);
-          }
+  document.getElementById("mapping-space").innerHTML = "";
+  let storedObjectString = localStorage.getItem(
+    LOCAL_STORAGE_KEY_MAPPING + "-" + deviceName
+  );
+  let storedOrderList = JSON.parse(
+    localStorage.getItem(LOCAL_STORAGE_ORDER_LIST + "-" + deviceName)
+  );
+  orderList = storedOrderList !== null ? storedOrderList : [];
+  if (storedObjectString !== null) {
+    keyMapping = JSON.parse(storedObjectString);
+    console.log(keyMapping);
+    for (let i = 0; i < orderList.length; i++) {
+      if (keyMapping.hasOwnProperty(orderList[i])) {
+        let outputKeys = keyMapping[orderList[i]];
+        if (Array.isArray(outputKeys) && outputKeys.length === 0) continue;
+        let mapping = addNewMapping();
+        mapping.querySelector(".input-key").value = orderList[i];
+        let outputField = mapping.querySelector(".output-key");
+        outputField.value = outputKeys[0].key;
+        outputField.setAttribute("keycode", outputKeys[0].keycode);
+        for (let i = 1; i < outputKeys.length; i++) {
+          let newOutputField = addOutputField(
+            mapping.querySelector(".output-container")
+          );
+          newOutputField.value = outputKeys[i].key;
+          newOutputField.setAttribute("keycode", outputKeys[i].keycode);
         }
       }
     }
   }
-  updateMapping();
+  chrome.runtime.sendMessage({
+    action: ACTIONS.UPDATE_KEY_MAPPING,
+    keyMapping: keyMapping,
+    deviceName: deviceName,
+  });
 }
 
 function updateMapping() {
@@ -63,11 +65,18 @@ function updateMapping() {
     }
     orderList.push(inputKey);
   });
-  localStorage.setItem(LOCAL_STORAGE_ORDER_LIST, JSON.stringify(orderList));
-  localStorage.setItem(LOCAL_STORAGE_KEY_MAPPING, JSON.stringify(keyMapping));
+  localStorage.setItem(
+    LOCAL_STORAGE_ORDER_LIST + "-" + deviceName,
+    JSON.stringify(orderList)
+  );
+  localStorage.setItem(
+    LOCAL_STORAGE_KEY_MAPPING + "-" + deviceName,
+    JSON.stringify(keyMapping)
+  );
   chrome.runtime.sendMessage({
     action: ACTIONS.UPDATE_KEY_MAPPING,
     keyMapping: keyMapping,
+    deviceName: deviceName,
   });
   console.log(keyMapping);
 }
@@ -106,7 +115,7 @@ function setInputInterval() {
   if (inputIntervalId !== null) clearInterval(inputIntervalId);
   inputIntervalId = setInterval(() => {
     chrome.runtime.sendMessage({
-      action: ACTIONS.POPUP_IN_INPUT_FIELD
+      action: ACTIONS.POPUP_IN_INPUT_FIELD,
     });
   }, 100);
 }
@@ -169,22 +178,22 @@ function connectDevice() {
     /Chrome\/([0-9.]+)/.exec(navigator.userAgent)[1].match(/\d+/)[0],
     10
   );
-  if (typeof version === "number" && version >= 117){
+  if (typeof version === "number" && version >= 117) {
     chrome.tabs.create({ url: chrome.runtime.getURL("popup2.html") });
-  }
-  else{
-    chrome.tabs.query(
-      { active: true, currentWindow: true },
-      function (tabs) {
-        chrome.tabs.sendMessage(tabs[0].id, {
-          action: ACTIONS.REQUEST_DEVICE,
-        });
-      }
-    );  
+  } else {
+    console("pls update chrome to use this feature!");
   }
 }
 
-window.addEventListener("load", () => {
+window.addEventListener("load", async () => {
+  await getDeviceName();
+  if (deviceName === undefined) {
+    document.getElementById("device-name").innerHTML =
+      "unable to load device name !";
+    return;
+  }
+  document.getElementById("device-name").innerHTML = deviceName;
+
   document
     .getElementById("add-button")
     .addEventListener("click", addNewMapping);
@@ -192,8 +201,19 @@ window.addEventListener("load", () => {
     .getElementById("connect-device-button")
     .addEventListener("click", connectDevice);
   createMapping();
-  updateMapping();
 });
+
+async function getDeviceName() {
+  chrome.runtime.sendMessage(
+    {
+      action: ACTIONS.GET_DEVICE_NAME,
+    },
+    function (response) {
+      deviceName = response;
+      console.log("device name is", deviceName);
+    }
+  );
+}
 
 chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   if (message.action == ACTIONS.INPUT_KEY_PRESSED) {
@@ -202,5 +222,8 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
       focusedInput.value = message.key;
       updateMapping();
     }
+  } else if (message.action == ACTIONS.DEVICE_CHANGED) {
+    deviceName = message.deviceName;
+    createMapping();
   }
 });
