@@ -177,7 +177,7 @@ function connectDevice(productId, vendorId) {
       console.log("Data saved in chrome.storage.local from service worker");
     }
   );
-  device.driver.open();
+  device.driver.open(handleKeyInput);
 }
 
 function startPopupTimer() {

@@ -30,7 +30,7 @@ export class GamepadDriver extends BaseDriver {
         console.log(base64String);
         console.log(uint8Array);
         TouchList.lastEntryTime = currentTime;
-        callbackFunction(base64String);
+        callbackFunction({key: base64String});
       }
     }
   };
