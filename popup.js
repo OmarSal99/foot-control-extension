@@ -186,6 +186,10 @@ function connectDevice() {
 }
 
 window.addEventListener("load", async () => {
+  document
+    .getElementById("connect-device-button")
+    .addEventListener("click", connectDevice);
+  createMapping();
   await getDeviceName();
   if (deviceName === undefined) {
     document.getElementById("device-name").innerHTML =
@@ -197,10 +201,6 @@ window.addEventListener("load", async () => {
   document
     .getElementById("add-button")
     .addEventListener("click", addNewMapping);
-  document
-    .getElementById("connect-device-button")
-    .addEventListener("click", connectDevice);
-  createMapping();
 });
 
 async function getDeviceName() {
