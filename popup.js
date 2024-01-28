@@ -204,15 +204,18 @@ window.addEventListener("load", async () => {
 });
 
 async function getDeviceName() {
-  chrome.runtime.sendMessage(
-    {
-      action: ACTIONS.GET_DEVICE_NAME,
-    },
-    function (response) {
-      deviceName = response;
-      console.log("device name is", deviceName);
-    }
-  );
+  promise = await new Promise((resolve, reject) => {
+    chrome.runtime.sendMessage(
+      {
+        action: ACTIONS.GET_DEVICE_NAME,
+      },
+      function (response) {
+        deviceName = response;
+        console.log("device name is", deviceName);
+        resolve();
+      }
+    );
+  });
 }
 
 chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
