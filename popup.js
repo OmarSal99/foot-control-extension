@@ -204,7 +204,7 @@ window.addEventListener("load", async () => {
 });
 
 async function getDeviceName() {
-  promise = await new Promise((resolve, reject) => {
+  await new Promise((resolve, reject) => {
     chrome.runtime.sendMessage(
       {
         action: ACTIONS.GET_DEVICE_NAME,
