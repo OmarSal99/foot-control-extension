@@ -190,28 +190,20 @@ window.addEventListener("load", async () => {
     .getElementById("connect-device-button")
     .addEventListener("click", connectDevice);
   getDeviceName();
-  if (deviceName === undefined) {
-    document.getElementById("device-name").innerHTML =
-      "unable to load device name !";
-    return;
-  }
-  createMapping();
-  document.getElementById("device-name").innerHTML = deviceName;
-
   document
     .getElementById("add-button")
     .addEventListener("click", addNewMapping);
+  document.getElementById("add-button").disabled = true;
 });
 
 async function getDeviceName() {
-  chrome.runtime.sendMessage(
-    {
-      action: ACTIONS.GET_DEVICE_NAME,
-    }
-  );
+  chrome.runtime.sendMessage({
+    action: ACTIONS.GET_DEVICE_NAME,
+  });
 }
 
 chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
+  console.log("msg recieved in popup", message);
   if (message.action == ACTIONS.INPUT_KEY_PRESSED) {
     let focusedInput = document.activeElement;
     if (focusedInput.classList.contains("input-key")) {
@@ -220,6 +212,15 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
     }
   } else if (message.action == ACTIONS.DEVICE_CHANGED) {
     deviceName = message.deviceName;
+    console.log("device name is", deviceName);
+    if (deviceName === undefined) {
+      document.getElementById("add-button").disabled = true;
+      document.getElementById("device-name").innerHTML =
+        "unable to load device name !";
+      return;
+    }
+    document.getElementById("add-button").disabled = false;
     createMapping();
+    document.getElementById("device-name").innerHTML = deviceName;
   }
 });
