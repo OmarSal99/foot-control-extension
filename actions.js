@@ -8,5 +8,7 @@ export const ACTIONS = {
     INPUT_KEY_PRESSED: "input key pressed",
     DEVICE_PERM_UPDATED: "device permission updated",
     GET_DEVICE_NAME: "get device name",
-    DEVICE_CHANGED: "device changed"
+    DEVICE_CHANGED: "device changed",
+    GET_ALL_MAPPING: "get all mapping",
+    SEND_ALL_MAPPING: "send all mapping"
 }

@@ -11,7 +11,6 @@ const MAX_LOOPS = 1000;
 
 const KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE =
   "foot pedal key mapping service-worker";
-const LAST_CONNECTED_DEVICE_LOCAL_STORAGE_KEY = "last connnected HID device";
 
 let popupTimer = undefined;
 let forwardInputToPopup = false;
@@ -59,12 +58,36 @@ chrome.runtime.onMessage.addListener(async function (
     case ACTIONS.UPDATE_KEY_MAPPING:
       keyMapping = message.keyMapping;
       let storageObject = {};
-      storageObject[KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE] = keyMapping;
+      storageObject[
+        KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE + "-" + message.deviceName
+      ] = keyMapping;
       chrome.storage.local.set(storageObject, function () {
         console.log("Data saved in chrome.storage.local from service worker");
       });
+      chrome.storage.local.get(
+        KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE,
+        function (result) {
+          let devices = result[KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE];
+          if (
+            devices[message.deviceName] === undefined &&
+            Object.keys(keyMapping).length !== 0
+          ) {
+            devices[message.deviceName] = true;
+            let storageObj = {};
+            storageObj[KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE] = devices;
+            chrome.storage.local.set(storageObj, function () {});
+          } else if (
+            devices[message.deviceName] !== undefined &&
+            Object.keys(keyMapping).length === 0
+          ) {
+            delete devices[message.deviceName];
+            let storageObj = {};
+            storageObj[KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE] = devices;
+            chrome.storage.local.set(storageObj, function () {});
+          }
+        }
+      );
       break;
-
     case ACTIONS.KEY_EVENT:
       await handleKeyInput(message);
       break;
@@ -79,10 +102,48 @@ chrome.runtime.onMessage.addListener(async function (
       break;
 
     case ACTIONS.GET_DEVICE_NAME:
-        chrome.runtime.sendMessage({
-            action: ACTIONS.DEVICE_CHANGED,
-            deviceName: deviceName
-          });
+      chrome.runtime.sendMessage({
+        action: ACTIONS.DEVICE_CHANGED,
+        deviceName: deviceName,
+      });
+      break;
+    case ACTIONS.GET_ALL_MAPPING:
+      chrome.storage.local.get(
+        KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE,
+        async function (result) {
+          if (result[KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE] !== undefined) {
+            let mappings = {};
+            let promises = [];
+            for (let key in result[KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE]) {
+              promises.push(
+                new Promise((resolve, reject) => {
+                  chrome.storage.local.get(
+                    KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE + "-" + key,
+                    function (result) {
+                      if (
+                        result[
+                          KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE + "-" + key
+                        ] !== undefined
+                      ) {
+                        mappings[key] =
+                          result[
+                            KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE + "-" + key
+                          ];
+                      }
+                      resolve();
+                    }
+                  );
+                })
+              );
+            }
+            await Promise.all(promises);
+            chrome.runtime.sendMessage({
+              action: ACTIONS.SEND_ALL_MAPPING,
+              mappings: mappings,
+            });
+          }
+        }
+      );
       break;
     default:
       break;
@@ -181,20 +242,18 @@ async function connectDevice(productId, vendorId) {
     console.log("unable to find device in the devices-list");
     return;
   }
-  //   let storageObject = {};
-  //   storageObject[LAST_CONNECTED_DEVICE_LOCAL_STORAGE_KEY] = {
-  //     productId: productId,
-  //     vendorId: vendorId,
-  //   };
-  //   chrome.storage.local.set(storageObject, function () {
-  //     console.log("Data saved in chrome.storage.local from service worker");
-  //   });
+
   deviceName = device.name;
   chrome.runtime.sendMessage({
     action: ACTIONS.DEVICE_CHANGED,
     deviceName: deviceName,
   });
   device.driver.open(handleKeyInput);
+  let storageKey = KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE + "-" + device.name;
+  chrome.storage.local.get(storageKey, function (result) {
+    if (result[storageKey] === undefined) keyMapping = {};
+    else keyMapping = result[storageKey];
+  });
 }
 
 function startPopupTimer() {
@@ -208,23 +267,5 @@ function startPopupTimer() {
     console.log("popupclosed!");
   }, 1000);
 }
-
-chrome.storage.local.get(
-  KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE,
-  function (result) {
-    keyMapping = result[KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE];
-  }
-);
-
-// chrome.storage.local.get(
-//   LAST_CONNECTED_DEVICE_LOCAL_STORAGE_KEY,
-//   function (result) {
-//     if (result[LAST_CONNECTED_DEVICE_LOCAL_STORAGE_KEY] === undefined) return;
-//     connectDevice(
-//       result[LAST_CONNECTED_DEVICE_LOCAL_STORAGE_KEY].productId,
-//       result[LAST_CONNECTED_DEVICE_LOCAL_STORAGE_KEY].vendorId
-//     );
-//   }
-// );
 
 if (keyMapping === undefined) keyMapping = {};

@@ -40,11 +40,13 @@ function createMapping() {
       }
     }
   }
-  chrome.runtime.sendMessage({
-    action: ACTIONS.UPDATE_KEY_MAPPING,
-    keyMapping: keyMapping,
-    deviceName: deviceName,
-  });
+  if (deviceName !== undefined) {
+    chrome.runtime.sendMessage({
+      action: ACTIONS.UPDATE_KEY_MAPPING,
+      keyMapping: keyMapping,
+      deviceName: deviceName,
+    });
+  }
 }
 
 function updateMapping() {
