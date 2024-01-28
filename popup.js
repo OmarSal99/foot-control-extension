@@ -189,13 +189,13 @@ window.addEventListener("load", async () => {
   document
     .getElementById("connect-device-button")
     .addEventListener("click", connectDevice);
-  createMapping();
-  await getDeviceName();
+  getDeviceName();
   if (deviceName === undefined) {
     document.getElementById("device-name").innerHTML =
       "unable to load device name !";
     return;
   }
+  createMapping();
   document.getElementById("device-name").innerHTML = deviceName;
 
   document
@@ -204,18 +204,11 @@ window.addEventListener("load", async () => {
 });
 
 async function getDeviceName() {
-  await new Promise((resolve, reject) => {
-    chrome.runtime.sendMessage(
-      {
-        action: ACTIONS.GET_DEVICE_NAME,
-      },
-      function (response) {
-        deviceName = response;
-        console.log("device name is", deviceName);
-        resolve();
-      }
-    );
-  });
+  chrome.runtime.sendMessage(
+    {
+      action: ACTIONS.GET_DEVICE_NAME,
+    }
+  );
 }
 
 chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {

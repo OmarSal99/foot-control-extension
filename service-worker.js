@@ -79,7 +79,11 @@ chrome.runtime.onMessage.addListener(async function (
       break;
 
     case ACTIONS.GET_DEVICE_NAME:
-      sendResponse(deviceName);
+        chrome.runtime.sendMessage({
+            action: ACTIONS.DEVICE_CHANGED,
+            deviceName: deviceName,
+          });
+      break;
     default:
       break;
   }
