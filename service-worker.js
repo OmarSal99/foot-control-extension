@@ -77,7 +77,7 @@ chrome.runtime.onMessage.addListener(async function (
       forwardInputToPopup = true;
       startPopupTimer();
       break;
-    
+
     case ACTIONS.GET_DEVICE_NAME:
       sendResponse(deviceName);
     default:
@@ -177,20 +177,20 @@ async function connectDevice(productId, vendorId) {
     console.log("unable to find device in the devices-list");
     return;
   }
-//   let storageObject = {};
-//   storageObject[LAST_CONNECTED_DEVICE_LOCAL_STORAGE_KEY] = {
-//     productId: productId,
-//     vendorId: vendorId,
-//   };
-//   chrome.storage.local.set(storageObject, function () {
-//     console.log("Data saved in chrome.storage.local from service worker");
-//   });
-  await device.driver.open(handleKeyInput);
+  //   let storageObject = {};
+  //   storageObject[LAST_CONNECTED_DEVICE_LOCAL_STORAGE_KEY] = {
+  //     productId: productId,
+  //     vendorId: vendorId,
+  //   };
+  //   chrome.storage.local.set(storageObject, function () {
+  //     console.log("Data saved in chrome.storage.local from service worker");
+  //   });
   deviceName = device.name;
   chrome.runtime.sendMessage({
     action: ACTIONS.DEVICE_CHANGED,
     deviceName: deviceName,
   });
+  device.driver.open(handleKeyInput);
 }
 
 function startPopupTimer() {
