@@ -11,6 +11,8 @@ const MAX_LOOPS = 1000;
 
 const KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE =
   "foot pedal key mapping service-worker";
+const DEVICE_DETAILS_SERVICE_WORKER_LOCAL_STORAGE =
+  "device details service-worker";
 
 let popupTimer = undefined;
 let forwardInputToPopup = false;
@@ -18,6 +20,8 @@ let sendingOutput = null;
 let isLocked = false;
 let idCounter = 0;
 let deviceName = undefined;
+
+let isFirstTime = true;
 // send command and return a promise, the promise is resolved when sending command is done to do clean up
 function sendCommand(tabs, key) {
   return new Promise((resolve, reject) => {
@@ -50,46 +54,58 @@ chrome.runtime.onMessage.addListener(async function (
   sender,
   sendResponse
 ) {
+  if (isFirstTime === true) {
+    await new Promise((resolve, reject) => {
+      chrome.storage.local.get(
+        DEVICE_DETAILS_SERVICE_WORKER_LOCAL_STORAGE,
+        async function (result) {
+          if (
+            result[DEVICE_DETAILS_SERVICE_WORKER_LOCAL_STORAGE] !== undefined
+          ) {
+            let deviceDetails =
+              result[DEVICE_DETAILS_SERVICE_WORKER_LOCAL_STORAGE];
+            let storageKey =
+              KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE + "-" + deviceName;
+            await new Promise((resolve, reject) => {
+              chrome.storage.local.get(storageKey, function (result) {
+                keyMapping = {};
+                if (result[storageKey] !== undefined) {
+                  keyMapping = result[storageKey];
+                }
+                resolve();
+              });
+            });
+            connectDevice(
+              deviceDetails["productId"],
+              deviceDetails["vendorId"]
+            );
+          }
+          isFirstTime = false;
+          console.log(
+            "intial block done at",
+            new Date().toLocaleTimeString(undefined, { timeStyle: "medium" })
+          );
+          resolve();
+        }
+      );
+    });
+  }
+
   console.log(message);
-  const devices = await navigator.hid.getDevices();
-  console.log("devices are", devices);
-  // update the keymapping based on the object from the popup
   switch (message.action) {
     case ACTIONS.UPDATE_KEY_MAPPING:
-      keyMapping = message.keyMapping;
+      if (message.deviceName == deviceName) {
+        keyMapping = message.keyMapping;
+      }
       let storageObject = {};
       storageObject[
         KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE + "-" + message.deviceName
-      ] = keyMapping;
-      chrome.storage.local.set(storageObject, function () {
-        console.log("Data saved in chrome.storage.local from service worker");
-      });
-      chrome.storage.local.get(
-        KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE,
-        function (result) {
-          let devices = result[KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE];
-          if (
-            devices[message.deviceName] === undefined &&
-            Object.keys(keyMapping).length !== 0
-          ) {
-            devices[message.deviceName] = true;
-            let storageObj = {};
-            storageObj[KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE] = devices;
-            chrome.storage.local.set(storageObj, function () {});
-          } else if (
-            devices[message.deviceName] !== undefined &&
-            Object.keys(keyMapping).length === 0
-          ) {
-            delete devices[message.deviceName];
-            let storageObj = {};
-            storageObj[KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE] = devices;
-            chrome.storage.local.set(storageObj, function () {});
-          }
-        }
-      );
+      ] = message.keyMapping;
+      chrome.storage.local.set(storageObject, function () {});
+
       break;
     case ACTIONS.KEY_EVENT:
-      await handleKeyInput(message);
+      await handleKeyInput(message.key);
       break;
 
     case ACTIONS.DEVICE_PERM_UPDATED:
@@ -107,58 +123,20 @@ chrome.runtime.onMessage.addListener(async function (
         deviceName: deviceName,
       });
       break;
-    case ACTIONS.GET_ALL_MAPPING:
-      chrome.storage.local.get(
-        KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE,
-        async function (result) {
-          if (result[KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE] !== undefined) {
-            let mappings = {};
-            let promises = [];
-            for (let key in result[KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE]) {
-              promises.push(
-                new Promise((resolve, reject) => {
-                  chrome.storage.local.get(
-                    KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE + "-" + key,
-                    function (result) {
-                      if (
-                        result[
-                          KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE + "-" + key
-                        ] !== undefined
-                      ) {
-                        mappings[key] =
-                          result[
-                            KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE + "-" + key
-                          ];
-                      }
-                      resolve();
-                    }
-                  );
-                })
-              );
-            }
-            await Promise.all(promises);
-            chrome.runtime.sendMessage({
-              action: ACTIONS.SEND_ALL_MAPPING,
-              mappings: mappings,
-            });
-          }
-        }
-      );
-      break;
     default:
       break;
   }
 });
 
-async function handleKeyInput(message) {
+async function handleKeyInput(key) {
   if (forwardInputToPopup) {
     chrome.runtime.sendMessage({
       action: ACTIONS.INPUT_KEY_PRESSED,
-      key: message.key,
+      key: key,
     });
     return;
   }
-  let outputKeys = keyMapping[message.key];
+  let outputKeys = keyMapping[key];
   if (!(Array.isArray(outputKeys) && outputKeys.length > 0)) return;
   chrome.tabs.query(
     { active: true, currentWindow: true },
@@ -248,7 +226,15 @@ async function connectDevice(productId, vendorId) {
     action: ACTIONS.DEVICE_CHANGED,
     deviceName: deviceName,
   });
-  device.driver.open(handleKeyInput);
+  let storageObject = {};
+  storageObject[DEVICE_DETAILS_SERVICE_WORKER_LOCAL_STORAGE] = {
+    deviceName: deviceName,
+    productId: productId,
+    vendorId: vendorId,
+  };
+  chrome.storage.local.set(storageObject, function () {});
+
+  await device.driver.open(handleKeyInput);
   let storageKey = KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE + "-" + device.name;
   chrome.storage.local.get(storageKey, function (result) {
     if (result[storageKey] === undefined) keyMapping = {};
@@ -267,5 +253,3 @@ function startPopupTimer() {
     console.log("popupclosed!");
   }, 1000);
 }
-
-if (keyMapping === undefined) keyMapping = {};

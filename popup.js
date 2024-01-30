@@ -60,10 +60,12 @@ function updateMapping() {
     if (inputKey in keyMapping || inputKey === "") return;
     keyMapping[inputKey] = [];
     for (let i = 0; i < outputFields.length; i++) {
-      keyMapping[inputKey].push({
-        key: outputFields[i].value,
-        keycode: outputFields[i].getAttribute("keycode"),
-      });
+      if(outputFields[i].value !==""){
+        keyMapping[inputKey].push({
+          key: outputFields[i].value,
+          keycode: outputFields[i].getAttribute("keycode"),
+        });
+      }
     }
     orderList.push(inputKey);
   });
@@ -75,6 +77,25 @@ function updateMapping() {
     LOCAL_STORAGE_KEY_MAPPING + "-" + deviceName,
     JSON.stringify(keyMapping)
   );
+  let devices = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_MAPPING));
+  if (devices === null &&     Object.keys(keyMapping).length !== 0  ){
+    devices = {};
+    devices[deviceName] = true;
+    localStorage.setItem(LOCAL_STORAGE_KEY_MAPPING, JSON.stringify(devices));
+  }
+  else if (
+    devices[deviceName] === undefined &&
+    Object.keys(keyMapping).length !== 0
+  ) {
+    devices[deviceName] = true;
+    localStorage.setItem(LOCAL_STORAGE_KEY_MAPPING, JSON.stringify(devices));
+  } else if (
+    devices[deviceName] !== undefined &&
+    Object.keys(keyMapping).length === 0
+  ) {
+    delete devices[deviceName];
+    localStorage.setItem(LOCAL_STORAGE_KEY_MAPPING, JSON.stringify(devices));
+  }
   chrome.runtime.sendMessage({
     action: ACTIONS.UPDATE_KEY_MAPPING,
     keyMapping: keyMapping,
@@ -183,7 +204,8 @@ function connectDevice() {
   if (typeof version === "number" && version >= 117) {
     chrome.tabs.create({ url: chrome.runtime.getURL("popup2.html") });
   } else {
-    console("pls update chrome to use this feature!");
+    document.getElementById("device-name").innerHTML =
+        "pls update chrome to use this feature!";
   }
 }
 
@@ -197,7 +219,6 @@ window.addEventListener("load", async () => {
     .addEventListener("click", addNewMapping);
   document.getElementById("add-button").disabled = true;
 });
-
 async function getDeviceName() {
   chrome.runtime.sendMessage({
     action: ACTIONS.GET_DEVICE_NAME,
@@ -218,7 +239,7 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
     if (deviceName === undefined) {
       document.getElementById("add-button").disabled = true;
       document.getElementById("device-name").innerHTML =
-        "unable to load device name !";
+        "unable to load device";
       return;
     }
     document.getElementById("add-button").disabled = false;

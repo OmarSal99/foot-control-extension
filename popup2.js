@@ -1,3 +1,6 @@
+const LOCAL_STORAGE_KEY_MAPPING = "foot pedal key mapping";
+const LOCAL_STORAGE_ORDER_LIST = "foot pedal order list";
+
 import { ACTIONS } from "./actions.js";
 document.addEventListener("DOMContentLoaded", function () {
   document.getElementById("myButton").addEventListener("click", async () => {
@@ -16,32 +19,55 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 });
 
-function createMapping(mappingObj) {
+function createMapping() {
+  let devices = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_MAPPING));
+  console.log("devices are", devices);
   let devicesSpace = document.getElementById("devices-space");
-//   while (devicesSpace.firstChild) {
-//     devicesSpace.removeChild(devicesSpace.firstChild);
-//   }
-  for (let name in mappingObj) {
+  while (devicesSpace.firstChild) {
+    devicesSpace.removeChild(devicesSpace.firstChild);
+  }
+
+  for (let name in devices) {
     let mappingDiv = document.createElement("div");
-    let nameElement = document.createElement("p");
+    mappingDiv.classList.add("mapping-div");
+    let nameElement = document.createElement("h2");
     nameElement.innerHTML = name;
     mappingDiv.appendChild(nameElement);
-    for (let key in mappingObj[name]) {
+    let device = JSON.parse(
+      localStorage.getItem(LOCAL_STORAGE_KEY_MAPPING + "-" + name)
+    );
+    let orderList = JSON.parse(
+      localStorage.getItem(LOCAL_STORAGE_ORDER_LIST + "-" + name)
+    );
+    for (let i = 0; i < orderList.length; i++) {
       let keyMapping = document.createElement("div");
       keyMapping.classList.add("key-mapping");
+
+      let inputKeyLabel = document.createElement("label");
+      inputKeyLabel.innerHTML = "input:";
+      inputKeyLabel.classList.add("input-key-label");
+      keyMapping.appendChild(inputKeyLabel);
+
       let inputElement = document.createElement("input");
       inputElement.type = "text";
       inputElement.classList.add("input-key");
       inputElement.disabled = true;
-      inputElement.value = key;
+      inputElement.value = orderList[i];
       keyMapping.appendChild(inputElement);
+
+      let outputKeyLabel = document.createElement("label");
+      outputKeyLabel.innerHTML = "output:";
+      outputKeyLabel.classList.add("output-key-label");
+      keyMapping.appendChild(outputKeyLabel);
+
       let outputContainer = document.createElement("div");
       outputContainer.classList.add("output-container");
-      for (let i=0;i<mappingObj[name][key].length; i++) {
+      for (let j = 0; j < device[orderList[i]].length; j++) {
         let outputKeyElement = document.createElement("input");
         outputKeyElement.type = "text";
-        outputKeyElement.value = mappingObj[name][key][i]['key'];
+        outputKeyElement.value = device[orderList[i]][j]["key"];
         outputKeyElement.disabled = true;
+        outputKeyElement.classList.add("output-key");
         outputContainer.appendChild(outputKeyElement);
       }
       keyMapping.appendChild(outputContainer);
@@ -53,14 +79,11 @@ function createMapping(mappingObj) {
 
 chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   console.log("msg recieved in popup2", message);
-  if (message.action == ACTIONS.SEND_ALL_MAPPING) {
-    createMapping(message.mappings);
+  if (message.action == ACTIONS.UPDATE_KEY_MAPPING) {
+    createMapping();
   }
 });
 
 window.addEventListener("load", async () => {
-  console.log("11111111");
-  chrome.runtime.sendMessage({
-    action: ACTIONS.GET_ALL_MAPPING,
-  });
+  createMapping();
 });

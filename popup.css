@@ -8,22 +8,23 @@ button {
   cursor: pointer;
 }
 
-button:disabled{
-    background-color: #4fa4ff;
+button:hover {
+    background-color: #0056b3;
+  }
 
+button:disabled {
+    background-color: #8dc5e6;
+    cursor: default;
+    box-shadow: none;
 }
 
-button:disabled:hover{
-    background-color: #4fa4ff;
-
-}
 
 body{
     height: fit-content;
 }
 
 .key-mapping{
-    display: inline-flex;
+    display: flex;
     flex-direction: row;
     align-items: flex-start;
 }
@@ -47,9 +48,7 @@ body{
 .output-container > .output-key:nth-child(3n) {
   margin-right: 0;
 }
-button:hover {
-  background-color: #0056b3;
-}
+
 
 .input-key {
   width: 40px;
