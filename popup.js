@@ -3,12 +3,20 @@ import { ACTIONS } from "./actions.js";
 const LOCAL_STORAGE_KEY_MAPPING = "foot pedal key mapping";
 const LOCAL_STORAGE_ORDER_LIST = "foot pedal order list";
 
+//dictionary that actually store the mapping, key: []
+//the key (string) is the input and the array contains a list of the ouputs
 let keyMapping = {};
+//a list to store the order of keys from keymapping that apear in the ui
 let orderList = [];
 
+//the current device name that the keymapping is for
 let deviceName = undefined;
+//store inputinterval id which will be used to clear it when it's done
+//the interval sends msgs to background rapidly to inform it that the user is in the input field so it pass the input from the device to the popup
 let inputIntervalId = null;
 
+//initial function that will run when the device changes (or when open the popup for the first time)
+//it load the stored data for that device name to the ui and update keymapping
 function createMapping() {
   document.getElementById("mapping-space").innerHTML = "";
   let storedObjectString = localStorage.getItem(
@@ -49,6 +57,8 @@ function createMapping() {
   }
 }
 
+//this run every time user change something in the ui, it distroy the old keymapping and rebuild it based on the ui
+//a msg indicate that the mapping update is sent with the new mapping
 function updateMapping() {
   keyMapping = {};
   let mappingDiv = document.getElementById("mapping-space");
@@ -104,12 +114,14 @@ function updateMapping() {
   console.log(keyMapping);
 }
 
+//delete a key mapping (row)
 function deleteMapping(event) {
   let parentDiv = event.target.parentNode;
   parentDiv.remove();
   updateMapping();
 }
 
+//create output field and place it inside this 
 function addOutputField(parentDiv) {
   let fields = parentDiv.getElementsByClassName("output-key");
   let outputField = createOutputField();
@@ -143,6 +155,7 @@ function setInputInterval() {
   }, 100);
 }
 
+//add new mapping row
 function addNewMapping() {
   let mappingDiv = document.getElementById("mapping-space");
   let newMapping = document.createElement("div");
@@ -197,19 +210,27 @@ function addNewMapping() {
 }
 
 function connectDevice() {
+  //to allow background in an extension to connect and use webHID it needs to ask the user to give access to that device
+  //this can only done in a tab for the extension (you can't request it from the normal popup)
+  //and it require chrome version 117+
+
+  //get chrome version
   let version = parseInt(
     /Chrome\/([0-9.]+)/.exec(navigator.userAgent)[1].match(/\d+/)[0],
     10
   );
+  //if chrome version is 117+ it will open popup2 so the user can select the device
   if (typeof version === "number" && version >= 117) {
     chrome.tabs.create({ url: chrome.runtime.getURL("popup2.html") });
   } else {
+    //inform the user that chrome need to be updated
     document.getElementById("device-name").innerHTML =
         "pls update chrome to use this feature!";
   }
 }
 
 window.addEventListener("load", async () => {
+  //bind buttons and request the device name from the background
   document
     .getElementById("connect-device-button")
     .addEventListener("click", connectDevice);
@@ -225,15 +246,18 @@ async function getDeviceName() {
   });
 }
 
+//add listeners to msgs
 chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   console.log("msg recieved in popup", message);
-  if (message.action == ACTIONS.INPUT_KEY_PRESSED) {
+  if (message.action === ACTIONS.INPUT_KEY_PRESSED) {
+    //background send msg that a key pressed (on the device) only if the user is inside input field
     let focusedInput = document.activeElement;
     if (focusedInput.classList.contains("input-key")) {
       focusedInput.value = message.key;
       updateMapping();
     }
-  } else if (message.action == ACTIONS.DEVICE_CHANGED) {
+  } else if (message.action === ACTIONS.DEVICE_CHANGED) {
+    //background will send a msg containing the current device name if it changed or after a device name request
     deviceName = message.deviceName;
     console.log("device name is", deviceName);
     if (deviceName === undefined) {

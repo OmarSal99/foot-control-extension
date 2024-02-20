@@ -3,10 +3,12 @@ const LOCAL_STORAGE_ORDER_LIST = "foot pedal order list";
 
 import { ACTIONS } from "./actions.js";
 document.addEventListener("DOMContentLoaded", function () {
+  //requst a device from webHID when button is pressed
   document.getElementById("myButton").addEventListener("click", async () => {
     await navigator.hid
       .requestDevice({ filters: [] })
       .then(async (devices) => {
+        //after selecting a device send msg to inform background worker of that
         chrome.runtime.sendMessage({
           action: ACTIONS.DEVICE_PERM_UPDATED,
           productId: devices[0].productId,
@@ -19,6 +21,8 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 });
 
+//this function load all mapping for all device from local storage and show them
+//the local storage is teh same as popup so it just read from it and rely on popup to make any updates on it
 function createMapping() {
   let devices = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_MAPPING));
   console.log("devices are", devices);
@@ -79,7 +83,8 @@ function createMapping() {
 
 chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   console.log("msg recieved in popup2", message);
-  if (message.action == ACTIONS.UPDATE_KEY_MAPPING) {
+  //indicate that something changed and recreate the mapping
+  if (message.action === ACTIONS.UPDATE_KEY_MAPPING) {
     createMapping();
   }
 });
