@@ -3,6 +3,7 @@ export const ACTIONS = {
     UPDATE_KEY_MAPPING : "update key mapping",
     REFRESH_PAGE : "refresh page",
     TAB: "tab pressed",
+    FULL_SCREEN: "full screen",
     REQUEST_DEVICE: "request device",
     POPUP_IN_INPUT_FIELD: "popup in input field",
     INPUT_KEY_PRESSED: "input key pressed",
