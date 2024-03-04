@@ -1,4 +1,5 @@
 import { ACTIONS } from "./actions.js";
+import devicesMappings from "./devices-mappings.json" assert { type: "json" };
 
 const LOCAL_STORAGE_KEY_MAPPING = "foot pedal key mapping";
 const LOCAL_STORAGE_ORDER_LIST = "foot pedal order list";
@@ -11,9 +12,41 @@ let orderList = [];
 
 //the current device name that the keymapping is for
 let deviceName = undefined;
+// The current device details pid and vid
+let deviceDetails = undefined;
 //store inputinterval id which will be used to clear it when it's done
 //the interval sends msgs to background rapidly to inform it that the user is in the input field so it pass the input from the device to the popup
 let inputIntervalId = null;
+
+function loadMapping() {
+  console.log("went into loadMapping");
+  console.log(deviceName);
+  console.log(deviceDetails);
+  if (deviceName !== undefined && deviceDetails !== undefined) {
+    const connectedDevice = devicesMappings.filter(
+      (device) =>
+        device.pid == deviceDetails.pid && device.vid == deviceDetails.vid
+    )[0];
+    const deviceEntries = [];
+    const mappings = {};
+    console.log(connectedDevice);
+    for (const key of Object.keys(connectedDevice.keyMappings)) {
+      deviceEntries.push(key);
+      mappings[key] = connectedDevice.keyMappings[key].map((char) => ({
+        key: char,
+        keycode: char.charCodeAt(0),
+      }));
+    }
+    localStorage.setItem(
+      LOCAL_STORAGE_ORDER_LIST + "-" + deviceName,
+      JSON.stringify(deviceEntries)
+    );
+    localStorage.setItem(
+      LOCAL_STORAGE_KEY_MAPPING + "-" + deviceName,
+      JSON.stringify(mappings)
+    );
+  }
+}
 
 //initial function that will run when the device changes (or when open the popup for the first time)
 //it load the stored data for that device name to the ui and update keymapping
@@ -70,7 +103,7 @@ function updateMapping() {
     if (inputKey in keyMapping || inputKey === "") return;
     keyMapping[inputKey] = [];
     for (let i = 0; i < outputFields.length; i++) {
-      if(outputFields[i].value !==""){
+      if (outputFields[i].value !== "") {
         keyMapping[inputKey].push({
           key: outputFields[i].value,
           keycode: outputFields[i].getAttribute("keycode"),
@@ -88,12 +121,11 @@ function updateMapping() {
     JSON.stringify(keyMapping)
   );
   let devices = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_MAPPING));
-  if (devices === null &&     Object.keys(keyMapping).length !== 0  ){
+  if (devices === null && Object.keys(keyMapping).length !== 0) {
     devices = {};
     devices[deviceName] = true;
     localStorage.setItem(LOCAL_STORAGE_KEY_MAPPING, JSON.stringify(devices));
-  }
-  else if (
+  } else if (
     devices[deviceName] === undefined &&
     Object.keys(keyMapping).length !== 0
   ) {
@@ -115,13 +147,13 @@ function updateMapping() {
 }
 
 //delete a key mapping (row)
-function deleteMapping(event) {
-  let parentDiv = event.target.parentNode;
-  parentDiv.remove();
-  updateMapping();
-}
+// function deleteMapping(event) {
+//   let parentDiv = event.target.parentNode;
+//   parentDiv.remove();
+//   updateMapping();
+// }
 
-//create output field and place it inside this 
+//create output field and place it inside this
 function addOutputField(parentDiv) {
   let fields = parentDiv.getElementsByClassName("output-key");
   let outputField = createOutputField();
@@ -134,26 +166,26 @@ function createOutputField() {
   outputKey.type = "text";
   outputKey.classList.add("output-key");
   outputKey.setAttribute("keycode", "");
-  outputKey.onkeydown = function (event) {
-    outputKey.value = event.key;
-    outputKey.setAttribute(
-      "keycode",
-      event.key.match(/^[a-z]$/) ? event.key.charCodeAt(0) : event.keyCode
-    );
-    event.preventDefault();
-    updateMapping();
-  };
+  // outputKey.onkeydown = function (event) {
+  //   outputKey.value = event.key;
+  //   outputKey.setAttribute(
+  //     "keycode",
+  //     event.key.match(/^[a-z]$/) ? event.key.charCodeAt(0) : event.keyCode
+  //   );
+  //   event.preventDefault();
+  //   updateMapping();
+  // };
   return outputKey;
 }
 
-function setInputInterval() {
-  if (inputIntervalId !== null) clearInterval(inputIntervalId);
-  inputIntervalId = setInterval(() => {
-    chrome.runtime.sendMessage({
-      action: ACTIONS.POPUP_IN_INPUT_FIELD,
-    });
-  }, 100);
-}
+// function setInputInterval() {
+//   if (inputIntervalId !== null) clearInterval(inputIntervalId);
+//   inputIntervalId = setInterval(() => {
+//     chrome.runtime.sendMessage({
+//       action: ACTIONS.POPUP_IN_INPUT_FIELD,
+//     });
+//   }, 100);
+// }
 
 //add new mapping row
 function addNewMapping() {
@@ -167,17 +199,18 @@ function addNewMapping() {
   let inputKey = document.createElement("input");
   inputKey.type = "text";
   inputKey.classList.add("input-key");
-  inputKey.onkeydown = (event) => {
-    //event.preventDefault();
-    updateMapping();
-  };
-  inputKey.addEventListener("focus", function () {
-    setInputInterval();
-  });
-  inputKey.addEventListener("blur", function () {
-    clearInterval(inputIntervalId);
-    inputIntervalId = null;
-  });
+  // inputKey.onkeydown = (event) => {
+  //   //event.preventDefault();
+  //   updateMapping();
+  // };
+  inputKey.setAttribute("disabled", true);
+  // inputKey.addEventListener("focus", function () {
+  //   setInputInterval();
+  // });
+  // inputKey.addEventListener("blur", function () {
+  //   clearInterval(inputIntervalId);
+  //   inputIntervalId = null;
+  // });
   newMapping.appendChild(inputKeyLabel);
   newMapping.appendChild(inputKey);
 
@@ -191,21 +224,21 @@ function addNewMapping() {
   outputContainer.appendChild(outputKey);
   newMapping.appendChild(outputContainer);
 
-  let addFieldButton = document.createElement("button");
-  addFieldButton.innerHTML = "+";
-  addFieldButton.classList.add("add-field-button");
-  newMapping.appendChild(addFieldButton);
+  // let addFieldButton = document.createElement("button");
+  // addFieldButton.innerHTML = "+";
+  // addFieldButton.classList.add("add-field-button");
+  // newMapping.appendChild(addFieldButton);
 
-  let deleteButton = document.createElement("button");
-  deleteButton.innerHTML = "X";
-  deleteButton.classList.add("delete-button");
-  newMapping.appendChild(deleteButton);
+  // let deleteButton = document.createElement("button");
+  // deleteButton.innerHTML = "X";
+  // deleteButton.classList.add("delete-button");
+  // newMapping.appendChild(deleteButton);
 
   mappingDiv.appendChild(newMapping);
-  addFieldButton.addEventListener("click", (event) => {
-    addOutputField(event.target.parentNode.querySelector(".output-container"));
-  });
-  deleteButton.addEventListener("click", deleteMapping);
+  // addFieldButton.addEventListener("click", (event) => {
+  //   addOutputField(event.target.parentNode.querySelector(".output-container"));
+  // });
+  // deleteButton.addEventListener("click", deleteMapping);
   return newMapping;
 }
 
@@ -225,19 +258,27 @@ function connectDevice() {
   } else {
     //inform the user that chrome need to be updated
     document.getElementById("device-name").innerHTML =
-        "pls update chrome to use this feature!";
+      "pls update chrome to use this feature!";
   }
 }
 
 window.addEventListener("load", async () => {
+  console.log("popup opened");
   //bind buttons and request the device name from the background
   document
     .getElementById("connect-device-button")
     .addEventListener("click", connectDevice);
-  getDeviceName();
-  document
-    .getElementById("add-button")
-    .addEventListener("click", addNewMapping);
+  console.log(deviceDetails);
+
+  if (deviceDetails) {
+    getDeviceName();
+    loadMapping();
+    createMapping();
+  }
+
+  // document
+  //   .getElementById("add-button")
+  //   .addEventListener("click", addNewMapping);
   document.getElementById("add-button").disabled = true;
 });
 async function getDeviceName() {
@@ -248,26 +289,35 @@ async function getDeviceName() {
 
 //add listeners to msgs
 chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
-  console.log("msg recieved in popup", message);
+  console.log("msg recieved in popup");
+  console.log(message);
   if (message.action === ACTIONS.INPUT_KEY_PRESSED) {
     //background send msg that a key pressed (on the device) only if the user is inside input field
-    let focusedInput = document.activeElement;
-    if (focusedInput.classList.contains("input-key")) {
-      focusedInput.value = message.key;
-      updateMapping();
-    }
+    // let focusedInput = document.activeElement;
+    // if (focusedInput.classList.contains("input-key")) {
+    //   focusedInput.value = message.key;
+    //   updateMapping();
+    // }
+    console.log("Input key press deactivated");
   } else if (message.action === ACTIONS.DEVICE_CHANGED) {
     //background will send a msg containing the current device name if it changed or after a device name request
     deviceName = message.deviceName;
     console.log("device name is", deviceName);
     if (deviceName === undefined) {
+      console.log("from popup action DEVICE_CHANGED, device name undefined");
       document.getElementById("add-button").disabled = true;
       document.getElementById("device-name").innerHTML =
         "unable to load device";
       return;
     }
-    document.getElementById("add-button").disabled = false;
-    createMapping();
+    // document.getElementById("add-button").disabled = false;
+    if (message?.deviceDetails) {
+      deviceDetails = message.deviceDetails;
+      loadMapping();
+      console.log(message.deviceDetails);
+      createMapping();
+    }
+
     document.getElementById("device-name").innerHTML = deviceName;
   }
 });

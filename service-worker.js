@@ -9,20 +9,21 @@ const MAX_WAITING_TIME = 3000;
 // max loops before key input is dropped
 const MAX_LOOPS = 1000;
 
-const KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE =
-  "key mapping service-worker";
+const KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE = "key mapping service-worker";
 const DEVICE_DETAILS_SERVICE_WORKER_LOCAL_STORAGE =
   "device details service-worker";
 
 let popupTimer = undefined;
 let forwardInputToPopup = false;
 
-// to organize output order 
+// to organize output order
 let sendingOutput = null;
 let isLocked = false;
 let idCounter = 0;
 
 let deviceName = undefined;
+
+let deviceDetails = undefined;
 
 let isFirstTime = true;
 // send command and return a promise, the promise is resolved when sending command is done to do clean up
@@ -58,7 +59,7 @@ chrome.runtime.onMessage.addListener(async function (
   sendResponse
 ) {
   //if it is the fist time it try to connect to the same device as it was the last time
-  //this will called if the service-worker go to sleep and then wakeup 
+  //this will called if the service-worker go to sleep and then wakeup
   //if the chrome is closed permissions will be removed next time you open it, so user have to reselect the device to connect to
   if (isFirstTime === true) {
     await new Promise((resolve, reject) => {
@@ -68,12 +69,12 @@ chrome.runtime.onMessage.addListener(async function (
           if (
             result[DEVICE_DETAILS_SERVICE_WORKER_LOCAL_STORAGE] !== undefined
           ) {
-            let deviceDetails =
-              result[DEVICE_DETAILS_SERVICE_WORKER_LOCAL_STORAGE];
+            deviceDetails = result[DEVICE_DETAILS_SERVICE_WORKER_LOCAL_STORAGE];
             await connectDevice(
               deviceDetails["productId"],
               deviceDetails["vendorId"]
             );
+            // isFirstTime = false;
           }
           isFirstTime = false;
           console.log(
@@ -116,6 +117,7 @@ chrome.runtime.onMessage.addListener(async function (
       chrome.runtime.sendMessage({
         action: ACTIONS.DEVICE_CHANGED,
         deviceName: deviceName,
+        x: "bye",
       });
       break;
     default:
@@ -125,7 +127,7 @@ chrome.runtime.onMessage.addListener(async function (
 
 async function handleKeyInput(key) {
   //resolve the input key to it output keys, it make sure that every output only run when the previous one is done
-  
+
   //if the user is in the input field, there is no output keys instead it just send the input key to the popup
   if (forwardInputToPopup) {
     chrome.runtime.sendMessage({
@@ -240,9 +242,13 @@ async function connectDevice(productId, vendorId) {
   }
   //driver found, send msg for popup to update the mapping to the new device name
   deviceName = device.name;
+  console.log(`PID is: ${productId}, VID is: ${vendorId}`);
+  const deviceDetails = { pid: productId, vid: vendorId };
   chrome.runtime.sendMessage({
     action: ACTIONS.DEVICE_CHANGED,
     deviceName: deviceName,
+    deviceDetails: deviceDetails,
+    x: "hi",
   });
   //store the details of the last connected device
   let storageObject = {};
@@ -253,15 +259,20 @@ async function connectDevice(productId, vendorId) {
   };
   chrome.storage.local.set(storageObject, function () {});
 
-  await device.driver.open(handleKeyInput);
+  try {
+    await device.driver.open(handleKeyInput);
+  } catch (error) {
+    console.log(error);
+  }
+
   //load the new keymapping from the local storage
   let storageKey = KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE + "-" + device.name;
   await new Promise((resolve, reject) => {
     chrome.storage.local.get(storageKey, function (result) {
-        if (result[storageKey] === undefined) keyMapping = {};
-        else keyMapping = result[storageKey];
-        resolve();
-      });
+      if (result[storageKey] === undefined) keyMapping = {};
+      else keyMapping = result[storageKey];
+      resolve();
+    });
   });
 }
 
