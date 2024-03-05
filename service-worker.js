@@ -61,37 +61,39 @@ chrome.runtime.onMessage.addListener(async function (
   //if it is the fist time it try to connect to the same device as it was the last time
   //this will called if the service-worker go to sleep and then wakeup
   //if the chrome is closed permissions will be removed next time you open it, so user have to reselect the device to connect to
-  if (isFirstTime === true) {
-    await new Promise((resolve, reject) => {
-      chrome.storage.local.get(
-        DEVICE_DETAILS_SERVICE_WORKER_LOCAL_STORAGE,
-        async function (result) {
-          if (
-            result[DEVICE_DETAILS_SERVICE_WORKER_LOCAL_STORAGE] !== undefined
-          ) {
-            deviceDetails = result[DEVICE_DETAILS_SERVICE_WORKER_LOCAL_STORAGE];
-            await connectDevice(
-              deviceDetails["productId"],
-              deviceDetails["vendorId"]
-            );
-            // isFirstTime = false;
-          }
-          isFirstTime = false;
-          console.log(
-            "intial block done at",
-            new Date().toLocaleTimeString(undefined, { timeStyle: "medium" })
-          );
-          resolve();
-        }
-      );
-    });
-  }
+  // if (isFirstTime === true) {
+  //   await new Promise((resolve, reject) => {
+  //     chrome.storage.local.get(
+  //       DEVICE_DETAILS_SERVICE_WORKER_LOCAL_STORAGE,
+  //       async function (result) {
+  //         if (
+  //           result[DEVICE_DETAILS_SERVICE_WORKER_LOCAL_STORAGE] !== undefined
+  //         ) {
+  //           deviceDetails = result[DEVICE_DETAILS_SERVICE_WORKER_LOCAL_STORAGE];
+  //           await connectDevice(
+  //             deviceDetails["productId"],
+  //             deviceDetails["vendorId"]
+  //           );
+  //           // isFirstTime = false;
+  //         }
+  //         isFirstTime = false;
+  //         console.log(
+  //           "intial block done at",
+  //           new Date().toLocaleTimeString(undefined, { timeStyle: "medium" })
+  //         );
+  //         resolve();
+  //       }
+  //     );
+  //   });
+  // }
 
   console.log(message);
   switch (message.action) {
     case ACTIONS.UPDATE_KEY_MAPPING:
+      console.log("service worker received msg to update the mappings");
       if (message.deviceName === deviceName) {
         keyMapping = message.keyMapping;
+        console.log(keyMapping);
       }
       let storageObject = {};
       storageObject[
@@ -101,6 +103,7 @@ chrome.runtime.onMessage.addListener(async function (
 
       break;
     case ACTIONS.KEY_EVENT:
+      console.log("keyboard key pressed");
       await handleKeyInput(message.key);
       break;
 
@@ -117,6 +120,7 @@ chrome.runtime.onMessage.addListener(async function (
       chrome.runtime.sendMessage({
         action: ACTIONS.DEVICE_CHANGED,
         deviceName: deviceName,
+        deviceDetails: deviceDetails,
         x: "bye",
       });
       break;
@@ -125,7 +129,7 @@ chrome.runtime.onMessage.addListener(async function (
   }
 });
 
-async function handleKeyInput(key) {
+const handleKeyInput = async (key) => {
   //resolve the input key to it output keys, it make sure that every output only run when the previous one is done
 
   //if the user is in the input field, there is no output keys instead it just send the input key to the popup
@@ -225,7 +229,7 @@ async function handleKeyInput(key) {
     }
   );
   return;
-}
+};
 
 async function connectDevice(productId, vendorId) {
   let device = undefined;
@@ -243,13 +247,14 @@ async function connectDevice(productId, vendorId) {
   //driver found, send msg for popup to update the mapping to the new device name
   deviceName = device.name;
   console.log(`PID is: ${productId}, VID is: ${vendorId}`);
-  const deviceDetails = { pid: productId, vid: vendorId };
+  deviceDetails = { pid: productId, vid: vendorId };
   chrome.runtime.sendMessage({
     action: ACTIONS.DEVICE_CHANGED,
     deviceName: deviceName,
     deviceDetails: deviceDetails,
     x: "hi",
   });
+  console.log("sent device details");
   //store the details of the last connected device
   let storageObject = {};
   storageObject[DEVICE_DETAILS_SERVICE_WORKER_LOCAL_STORAGE] = {
@@ -266,14 +271,14 @@ async function connectDevice(productId, vendorId) {
   }
 
   //load the new keymapping from the local storage
-  let storageKey = KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE + "-" + device.name;
-  await new Promise((resolve, reject) => {
-    chrome.storage.local.get(storageKey, function (result) {
-      if (result[storageKey] === undefined) keyMapping = {};
-      else keyMapping = result[storageKey];
-      resolve();
-    });
-  });
+  // let storageKey = KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE + "-" + device.name;
+  // await new Promise((resolve, reject) => {
+  //   chrome.storage.local.get(storageKey, function (result) {
+  //     if (result[storageKey] === undefined) keyMapping = {};
+  //     else keyMapping = result[storageKey];
+  //     resolve();
+  //   });
+  // });
 }
 
 function startPopupTimer() {

@@ -12,6 +12,7 @@ export class GamepadDriver extends BaseDriver {
   }
 
   entryHandler = (event, callbackFunction) => {
+    console.log("From the entry handler of the gampad driver");
     const { data, device, reportId } = event;
     let uint8Array = new Uint8Array(data.buffer);
     const base64String = btoa(String.fromCharCode.apply(null, uint8Array));

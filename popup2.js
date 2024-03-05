@@ -32,6 +32,7 @@ function createMapping() {
   }
 
   for (let name in devices) {
+    console.log(name);
     let mappingDiv = document.createElement("div");
     mappingDiv.classList.add("mapping-div");
     let nameElement = document.createElement("h2");

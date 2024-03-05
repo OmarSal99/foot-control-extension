@@ -23,6 +23,7 @@ function loadMapping() {
   console.log(deviceName);
   console.log(deviceDetails);
   if (deviceName !== undefined && deviceDetails !== undefined) {
+    console.log("And into the if of loadMapping");
     const connectedDevice = devicesMappings.filter(
       (device) =>
         device.pid == deviceDetails.pid && device.vid == deviceDetails.vid
@@ -30,21 +31,53 @@ function loadMapping() {
     const deviceEntries = [];
     const mappings = {};
     console.log(connectedDevice);
-    for (const key of Object.keys(connectedDevice.keyMappings)) {
-      deviceEntries.push(key);
-      mappings[key] = connectedDevice.keyMappings[key].map((char) => ({
-        key: char,
-        keycode: char.charCodeAt(0),
-      }));
+    if (connectedDevice) {
+      for (const key of Object.keys(connectedDevice.keyMappings)) {
+        deviceEntries.push(key);
+        mappings[key] = connectedDevice.keyMappings[key].map((char) => ({
+          key: char,
+          keycode: char.charCodeAt(0),
+        }));
+      }
+      localStorage.setItem(
+        LOCAL_STORAGE_ORDER_LIST + "-" + deviceName,
+        JSON.stringify(deviceEntries)
+      );
+      localStorage.setItem(
+        LOCAL_STORAGE_KEY_MAPPING + "-" + deviceName,
+        JSON.stringify(mappings)
+      );
+
+      let devices = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_MAPPING));
+      if (devices === null && Object.keys(mappings).length !== 0) {
+        devices = {};
+        devices[deviceName] = true;
+        localStorage.setItem(
+          LOCAL_STORAGE_KEY_MAPPING,
+          JSON.stringify(devices)
+        );
+      } else if (
+        devices[deviceName] === undefined &&
+        Object.keys(mappings).length !== 0
+      ) {
+        devices[deviceName] = true;
+        localStorage.setItem(
+          LOCAL_STORAGE_KEY_MAPPING,
+          JSON.stringify(devices)
+        );
+      } else if (
+        devices[deviceName] !== undefined &&
+        Object.keys(mappings).length === 0
+      ) {
+        delete devices[deviceName];
+        localStorage.setItem(
+          LOCAL_STORAGE_KEY_MAPPING,
+          JSON.stringify(devices)
+        );
+      }
+
+      createMapping();
     }
-    localStorage.setItem(
-      LOCAL_STORAGE_ORDER_LIST + "-" + deviceName,
-      JSON.stringify(deviceEntries)
-    );
-    localStorage.setItem(
-      LOCAL_STORAGE_KEY_MAPPING + "-" + deviceName,
-      JSON.stringify(mappings)
-    );
   }
 }
 
@@ -82,6 +115,7 @@ function createMapping() {
     }
   }
   if (deviceName !== undefined) {
+    console.log(keyMapping);
     chrome.runtime.sendMessage({
       action: ACTIONS.UPDATE_KEY_MAPPING,
       keyMapping: keyMapping,
@@ -264,17 +298,18 @@ function connectDevice() {
 
 window.addEventListener("load", async () => {
   console.log("popup opened");
+  console.log(Date());
   //bind buttons and request the device name from the background
   document
     .getElementById("connect-device-button")
     .addEventListener("click", connectDevice);
   console.log(deviceDetails);
 
-  if (deviceDetails) {
-    getDeviceName();
-    loadMapping();
-    createMapping();
-  }
+  // if (deviceDetails) {
+  getDeviceName();
+  // loadMapping();
+  // createMapping();
+  // }
 
   // document
   //   .getElementById("add-button")
@@ -311,11 +346,12 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
       return;
     }
     // document.getElementById("add-button").disabled = false;
+    console.log(message.deviceDetails);
     if (message?.deviceDetails) {
       deviceDetails = message.deviceDetails;
       loadMapping();
       console.log(message.deviceDetails);
-      createMapping();
+      // createMapping();
     }
 
     document.getElementById("device-name").innerHTML = deviceName;

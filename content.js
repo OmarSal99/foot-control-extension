@@ -30,6 +30,7 @@ function handleKeyInput(key) {
 
 // adding keylisteners to run when a key is pressed
 document.addEventListener("keydown", (event) => {
+  console.log(event.key);
   if (isSingleDigitNumber(event.key)) handleKeyInput(event.key);
 });
 
