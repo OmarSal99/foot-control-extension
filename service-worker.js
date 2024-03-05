@@ -141,6 +141,8 @@ const handleKeyInput = async (key) => {
     return;
   }
   let outputKeys = keyMapping[key];
+  console.log("Input from connected device");
+  console.log(key);
   if (!(Array.isArray(outputKeys) && outputKeys.length > 0)) return;
   //chrome.tabs.query select the curtrent active and open tab to work in it, it will only be closed after all output keys done
   //that mean even if you changed the tab before the output keys queue is done it will still press the output keys on the tab that you pressed the input keys in
