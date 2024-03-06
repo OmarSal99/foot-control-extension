@@ -243,12 +243,48 @@ async function connectDevice(productId, vendorId) {
     }
   }
   if (device === undefined) {
+    chrome.notifications.create("", {
+      title: "Connection Failure",
+      message: "Device not supported",
+      type: "basic",
+      iconUrl: "./image.png",
+    });
     console.log("unable to find device in the devices-list");
     return;
   }
   //driver found, send msg for popup to update the mapping to the new device name
   deviceName = device.name;
   console.log(`PID is: ${productId}, VID is: ${vendorId}`);
+  // deviceDetails = { pid: productId, vid: vendorId };
+  // chrome.runtime.sendMessage({
+  //   action: ACTIONS.DEVICE_CHANGED,
+  //   deviceName: deviceName,
+  //   deviceDetails: deviceDetails,
+  //   x: "hi",
+  // });
+  // console.log("sent device details");
+  // //store the details of the last connected device
+  // let storageObject = {};
+  // storageObject[DEVICE_DETAILS_SERVICE_WORKER_LOCAL_STORAGE] = {
+  //   deviceName: deviceName,
+  //   productId: productId,
+  //   vendorId: vendorId,
+  // };
+  // chrome.storage.local.set(storageObject, function () {});
+
+  try {
+    await device.driver.open(handleKeyInput);
+  } catch (error) {
+    chrome.notifications.create("", {
+      title: "Connection Failure",
+      message: "HID device couldn't be opened",
+      type: "basic",
+      iconUrl: "./image.png",
+    });
+    console.log(error);
+    return;
+  }
+
   deviceDetails = { pid: productId, vid: vendorId };
   chrome.runtime.sendMessage({
     action: ACTIONS.DEVICE_CHANGED,
@@ -265,12 +301,6 @@ async function connectDevice(productId, vendorId) {
     vendorId: vendorId,
   };
   chrome.storage.local.set(storageObject, function () {});
-
-  try {
-    await device.driver.open(handleKeyInput);
-  } catch (error) {
-    console.log(error);
-  }
 
   //load the new keymapping from the local storage
   // let storageKey = KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE + "-" + device.name;

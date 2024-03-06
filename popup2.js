@@ -16,6 +16,12 @@ document.addEventListener("DOMContentLoaded", function () {
         });
       })
       .catch((error) => {
+        chrome.notifications.create("", {
+          title: "Connection Failure",
+          message: "Couldn't connect to device, check permissions.",
+          type: "basic",
+          iconUrl: "./image.png",
+        });
         console.error("Error connecting to HID device:", error);
       });
   });
