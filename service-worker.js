@@ -285,6 +285,13 @@ async function connectDevice(productId, vendorId) {
     return;
   }
 
+  chrome.notifications.create("", {
+    title: "Connection Succeeded",
+    message: `${deviceName} has been successfully connected`,
+    type: "basic",
+    iconUrl: "./image.png",
+  });
+
   deviceDetails = { pid: productId, vid: vendorId };
   chrome.runtime.sendMessage({
     action: ACTIONS.DEVICE_CHANGED,
