@@ -435,7 +435,7 @@ window.addEventListener("load", async () => {
   // document
   //   .getElementById("add-button")
   //   .addEventListener("click", addNewMapping);
-  document.getElementById("add-button").disabled = true;
+  // document.getElementById("add-button").disabled = true;
 });
 async function getDeviceName() {
   chrome.runtime.sendMessage({
@@ -461,7 +461,7 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
     console.log("device name is", deviceName);
     if (deviceName === undefined) {
       console.log("from popup action DEVICE_CHANGED, device name undefined");
-      document.getElementById("add-button").disabled = true;
+      // document.getElementById("add-button").disabled = true;
       document.getElementById("device-name").innerHTML =
         "unable to load device";
       return;

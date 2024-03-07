@@ -9,10 +9,14 @@ document.addEventListener("DOMContentLoaded", function () {
       .requestDevice({ filters: [] })
       .then(async (devices) => {
         //after selecting a device send msg to inform background worker of that
+        if (devices[0] === undefined) {
+          console.log("popup2 device choosing has been canceled 2lmafrood");
+          return;
+        }
         chrome.runtime.sendMessage({
           action: ACTIONS.DEVICE_PERM_UPDATED,
-          productId: devices[0].productId,
-          vendorId: devices[0].vendorId,
+          productId: devices[0]?.productId,
+          vendorId: devices[0]?.vendorId,
         });
       })
       .catch((error) => {
