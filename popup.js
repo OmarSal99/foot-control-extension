@@ -1,3 +1,4 @@
+import { DEVICES_LIST } from "./Drivers/devices-list.js";
 import { ACTIONS } from "./actions.js";
 import devicesMappings from "./devices-mappings.json" assert { type: "json" };
 
@@ -17,6 +18,66 @@ let deviceDetails = undefined;
 //store inputinterval id which will be used to clear it when it's done
 //the interval sends msgs to background rapidly to inform it that the user is in the input field so it pass the input from the device to the popup
 let inputIntervalId = null;
+
+function loadMappings2() {
+  const supportedDevices = [];
+  const devicesDetails = {};
+  DEVICES_LIST.forEach((device) => {
+    const filterResult = devicesMappings.filter((deviceMapping) => {
+      return (
+        device.driver.vendorId === deviceMapping.vid &&
+        device.driver.productId === deviceMapping.pid
+      );
+    })[0];
+
+    if (filterResult) {
+      filterResult["deviceName"] = device.name;
+      supportedDevices.push(filterResult);
+    }
+  });
+  console.log(supportedDevices);
+
+  for (const device of supportedDevices) {
+    const mappings = {};
+    const deviceEntries = [];
+    devicesDetails[device.deviceName] = { vid: device.vid, pid: device.pid };
+
+    for (const key of Object.keys(device.keyMappings)) {
+      deviceEntries.push(key);
+      mappings[key] = device.keyMappings[key].map((char) => ({
+        key: char,
+        keycode: char.charCodeAt(0),
+      }));
+    }
+    localStorage.setItem(
+      LOCAL_STORAGE_ORDER_LIST +
+        "-" +
+        device.deviceName +
+        "-" +
+        device.vid +
+        "-" +
+        device.pid,
+      JSON.stringify(deviceEntries)
+    );
+    localStorage.setItem(
+      LOCAL_STORAGE_KEY_MAPPING +
+        "-" +
+        device.deviceName +
+        "-" +
+        device.vid +
+        "-" +
+        device.pid,
+      JSON.stringify(mappings)
+    );
+    localStorage.setItem(
+      LOCAL_STORAGE_KEY_MAPPING,
+      JSON.stringify(devicesDetails)
+    );
+    console.log(mappings);
+    console.log(deviceEntries);
+    console.log(device);
+  }
+}
 
 function loadMapping() {
   console.log("went into loadMapping");
@@ -40,41 +101,63 @@ function loadMapping() {
         }));
       }
       localStorage.setItem(
-        LOCAL_STORAGE_ORDER_LIST + "-" + deviceName,
+        LOCAL_STORAGE_ORDER_LIST +
+          "-" +
+          deviceName +
+          "-" +
+          deviceDetails.vid +
+          "-" +
+          deviceDetails.pid,
         JSON.stringify(deviceEntries)
       );
       localStorage.setItem(
-        LOCAL_STORAGE_KEY_MAPPING + "-" + deviceName,
+        LOCAL_STORAGE_KEY_MAPPING +
+          "-" +
+          deviceName +
+          "-" +
+          deviceDetails.vid +
+          "-" +
+          deviceDetails.pid,
         JSON.stringify(mappings)
       );
 
       let devices = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_MAPPING));
-      if (devices === null && Object.keys(mappings).length !== 0) {
+      if (devices === null && Object.keys(keyMapping).length !== 0) {
         devices = {};
-        devices[deviceName] = true;
+        // devices[deviceName] = true;
+        devices[deviceName] = {
+          vid: deviceDetails.vid,
+          pid: deviceDetails.pid,
+        };
         localStorage.setItem(
           LOCAL_STORAGE_KEY_MAPPING,
           JSON.stringify(devices)
         );
       } else if (
         devices[deviceName] === undefined &&
-        Object.keys(mappings).length !== 0
+        Object.keys(keyMapping).length !== 0
       ) {
-        devices[deviceName] = true;
-        localStorage.setItem(
-          LOCAL_STORAGE_KEY_MAPPING,
-          JSON.stringify(devices)
-        );
-      } else if (
-        devices[deviceName] !== undefined &&
-        Object.keys(mappings).length === 0
-      ) {
-        delete devices[deviceName];
+        // devices[deviceName] = true;
+        devices[deviceName] = {
+          vid: deviceDetails.vid,
+          pid: deviceDetails.pid,
+        };
         localStorage.setItem(
           LOCAL_STORAGE_KEY_MAPPING,
           JSON.stringify(devices)
         );
       }
+      // I Hasan think this doesn't have real effect.
+      // else if (
+      //   devices[deviceName] !== undefined &&
+      //   Object.keys(keyMapping).length === 0
+      // ) {
+      //   delete devices[deviceName];
+      //   localStorage.setItem(
+      //     LOCAL_STORAGE_KEY_MAPPING,
+      //     JSON.stringify(devices)
+      //   );
+      // }
 
       createMapping();
     }
@@ -84,43 +167,66 @@ function loadMapping() {
 //initial function that will run when the device changes (or when open the popup for the first time)
 //it load the stored data for that device name to the ui and update keymapping
 function createMapping() {
-  document.getElementById("mapping-space").innerHTML = "";
-  let storedObjectString = localStorage.getItem(
-    LOCAL_STORAGE_KEY_MAPPING + "-" + deviceName
-  );
-  let storedOrderList = JSON.parse(
-    localStorage.getItem(LOCAL_STORAGE_ORDER_LIST + "-" + deviceName)
-  );
-  orderList = storedOrderList !== null ? storedOrderList : [];
-  if (storedObjectString !== null) {
-    keyMapping = JSON.parse(storedObjectString);
-    console.log(keyMapping);
-    for (let i = 0; i < orderList.length; i++) {
-      if (keyMapping.hasOwnProperty(orderList[i])) {
-        let outputKeys = keyMapping[orderList[i]];
-        if (Array.isArray(outputKeys) && outputKeys.length === 0) continue;
-        let mapping = addNewMapping();
-        mapping.querySelector(".input-key").value = orderList[i];
-        let outputField = mapping.querySelector(".output-key");
-        outputField.value = outputKeys[0].key;
-        outputField.setAttribute("keycode", outputKeys[0].keycode);
-        for (let i = 1; i < outputKeys.length; i++) {
-          let newOutputField = addOutputField(
-            mapping.querySelector(".output-container")
-          );
-          newOutputField.value = outputKeys[i].key;
-          newOutputField.setAttribute("keycode", outputKeys[i].keycode);
+  if (deviceName !== undefined && deviceDetails !== undefined) {
+    const connectedDevice = devicesMappings.filter(
+      (device) =>
+        device.pid == deviceDetails.pid && device.vid == deviceDetails.vid
+    )[0];
+
+    if (connectDevice) {
+      document.getElementById("mapping-space").innerHTML = "";
+      let storedObjectString = localStorage.getItem(
+        LOCAL_STORAGE_KEY_MAPPING +
+          "-" +
+          deviceName +
+          "-" +
+          deviceDetails.vid +
+          "-" +
+          deviceDetails.pid
+      );
+      let storedOrderList = JSON.parse(
+        localStorage.getItem(
+          LOCAL_STORAGE_ORDER_LIST +
+            "-" +
+            deviceName +
+            "-" +
+            deviceDetails.vid +
+            "-" +
+            deviceDetails.pid
+        )
+      );
+      orderList = storedOrderList !== null ? storedOrderList : [];
+      if (storedObjectString !== null) {
+        keyMapping = JSON.parse(storedObjectString);
+        console.log(keyMapping);
+        for (let i = 0; i < orderList.length; i++) {
+          if (keyMapping.hasOwnProperty(orderList[i])) {
+            let outputKeys = keyMapping[orderList[i]];
+            if (Array.isArray(outputKeys) && outputKeys.length === 0) continue;
+            let mapping = addNewMapping();
+            mapping.querySelector(".input-key").value = orderList[i];
+            let outputField = mapping.querySelector(".output-key");
+            outputField.value = outputKeys[0].key;
+            outputField.setAttribute("keycode", outputKeys[0].keycode);
+            for (let i = 1; i < outputKeys.length; i++) {
+              let newOutputField = addOutputField(
+                mapping.querySelector(".output-container")
+              );
+              newOutputField.value = outputKeys[i].key;
+              newOutputField.setAttribute("keycode", outputKeys[i].keycode);
+            }
+          }
         }
       }
+      // if (deviceName !== undefined) {
+      console.log(keyMapping);
+      chrome.runtime.sendMessage({
+        action: ACTIONS.UPDATE_KEY_MAPPING,
+        keyMapping: keyMapping,
+        deviceName: deviceName,
+      });
+      // }
     }
-  }
-  if (deviceName !== undefined) {
-    console.log(keyMapping);
-    chrome.runtime.sendMessage({
-      action: ACTIONS.UPDATE_KEY_MAPPING,
-      keyMapping: keyMapping,
-      deviceName: deviceName,
-    });
   }
 }
 
@@ -147,23 +253,37 @@ function updateMapping() {
     orderList.push(inputKey);
   });
   localStorage.setItem(
-    LOCAL_STORAGE_ORDER_LIST + "-" + deviceName,
+    LOCAL_STORAGE_ORDER_LIST +
+      "-" +
+      deviceName +
+      "-" +
+      deviceDetails.vid +
+      "-" +
+      deviceDetails.pid,
     JSON.stringify(orderList)
   );
   localStorage.setItem(
-    LOCAL_STORAGE_KEY_MAPPING + "-" + deviceName,
+    LOCAL_STORAGE_KEY_MAPPING +
+      "-" +
+      deviceName +
+      "-" +
+      deviceDetails.vid +
+      "-" +
+      deviceDetails.pid,
     JSON.stringify(keyMapping)
   );
   let devices = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_MAPPING));
   if (devices === null && Object.keys(keyMapping).length !== 0) {
     devices = {};
-    devices[deviceName] = true;
+    // devices[deviceName] = true;
+    devices[deviceName] = { vid: deviceDetails.vid, pid: deviceDetails.pid };
     localStorage.setItem(LOCAL_STORAGE_KEY_MAPPING, JSON.stringify(devices));
   } else if (
     devices[deviceName] === undefined &&
     Object.keys(keyMapping).length !== 0
   ) {
-    devices[deviceName] = true;
+    // devices[deviceName] = true;
+    devices[deviceName] = { vid: deviceDetails.vid, pid: deviceDetails.pid };
     localStorage.setItem(LOCAL_STORAGE_KEY_MAPPING, JSON.stringify(devices));
   } else if (
     devices[deviceName] !== undefined &&
@@ -307,6 +427,7 @@ window.addEventListener("load", async () => {
 
   // if (deviceDetails) {
   getDeviceName();
+  loadMappings2();
   // loadMapping();
   // createMapping();
   // }
@@ -349,9 +470,9 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
     console.log(message.deviceDetails);
     if (message?.deviceDetails) {
       deviceDetails = message.deviceDetails;
-      loadMapping();
+      // loadMapping();
       console.log(message.deviceDetails);
-      // createMapping();
+      createMapping();
     }
 
     document.getElementById("device-name").innerHTML = deviceName;

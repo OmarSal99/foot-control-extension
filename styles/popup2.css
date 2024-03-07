@@ -1,78 +1,107 @@
 button {
-    border-radius: 5px;
-    margin: 3px;
-    background-color: #007bff;
-    color: white;
-    border: 1px solid black;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    cursor: pointer;
-  }
-  
-  button:hover {
-      background-color: #0056b3;
-    }
-  
-  button:disabled {
-      background-color: #8dc5e6;
-      cursor: default;
-      box-shadow: none;
-  }
-  
-  .key-mapping{
-      display: flex;
-      flex-direction: row;
-      align-items: flex-start;
-  }
-  
-  .key-mapping:not(:last-child) {
-      margin-bottom: 5px; 
-    }
-  
-  .output-container {
-    display: flex;
-    flex-wrap: wrap;
-  }
-  
-  .output-container > .output-key {
-    width: 40px; /* Adjust the width as per your layout */
-    margin: 0;
-  }
+  border-radius: 5px;
+  margin: 3px;
+  background-color: #007bff;
+  color: white;
+  border: 1px solid black;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+}
 
-  
-  .input-key {
-    width: 40px;
-  }
-  
-  .output-key {
-    width: 40px;
-  }
-  
-  .input-key-label {
-    padding-left: 2px;
-    padding-right: 2px;
-  }
-  
-  .output-key-label {
-    padding-left: 2px;
-    padding-right: 2px;
-  }
-  
-  .mapping-div{
-    border-radius: 15px;
-    background: linear-gradient(to right, #4da3ff, #b3d8ff);
-    padding-left: 10px;
-    padding-bottom: 10px;
-    padding-top: 5px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  }
+button:hover {
+  background-color: #0056b3;
+}
 
-  #devices-space{
-    margin-top: 10px;
-  }
-  .mapping-div:not(:last-child) {
-    margin-bottom: 15px; 
-  }
-  h2{
-    margin:0px;
-    padding: 0px;
-  }
+button:disabled {
+  background-color: #8dc5e6;
+  cursor: default;
+  box-shadow: none;
+}
+
+.key-mapping {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 5px;
+}
+
+label {
+  font-family: Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #333; /* Text color */
+  margin-bottom: 5px; /* Space below the label */
+  display: block; /* Make each label appear on its own line */
+}
+
+.key-mapping:not(:last-child) {
+  margin-bottom: 5px;
+}
+
+.output-container {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.output-container > .output-key {
+  width: 40px; /* Adjust the width as per your layout */
+  margin: 0;
+}
+
+.input-key {
+  width: 40px;
+}
+
+.output-key {
+  width: 40px;
+}
+
+.input-key-label {
+  padding-left: 2px;
+  padding-right: 2px;
+}
+
+.output-key-label {
+  padding-left: 2px;
+  padding-right: 2px;
+}
+
+h2 {
+  margin-top: 5px;
+  margin-bottom: 5px;
+}
+
+.mapping-div {
+  display: flex;
+  flex-direction: column;
+  border-radius: 15px;
+  background: linear-gradient(to right, #4da3ff, #b3d8ff);
+  padding-left: 10px;
+  padding-bottom: 10px;
+  padding-top: 5px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  gap: 8px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+.key-value-holder {
+  display: flex;
+  flex-direction: row;
+  gap: 5px;
+  align-items: baseline;
+  /* margin-bottom: 5px; */
+  /* padding-top: 5px; */
+  /* padding-bottom: 5px; */
+}
+
+#devices-space {
+  margin-top: 10px;
+}
+.mapping-div:not(:last-child) {
+  margin-bottom: 15px;
+}
+/* h2 {
+  margin: 0px;
+  padding: 0px;
+} */

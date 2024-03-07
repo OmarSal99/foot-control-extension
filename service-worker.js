@@ -287,7 +287,7 @@ async function connectDevice(productId, vendorId) {
 
   chrome.notifications.create("", {
     title: "Connection Succeeded",
-    message: `${deviceName} has been successfully connected`,
+    message: `${deviceName} with VID: ${vendorId} and PID: ${productId} has been successfully connected`,
     type: "basic",
     iconUrl: "./image.png",
   });

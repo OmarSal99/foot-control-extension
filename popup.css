@@ -9,29 +9,28 @@ button {
 }
 
 button:hover {
-    background-color: #0056b3;
-  }
+  background-color: #0056b3;
+}
 
 button:disabled {
-    background-color: #8dc5e6;
-    cursor: default;
-    box-shadow: none;
+  background-color: #8dc5e6;
+  cursor: default;
+  box-shadow: none;
 }
 
-
-body{
-    height: fit-content;
+body {
+  height: fit-content;
 }
 
-.key-mapping{
-    display: flex;
-    flex-direction: row;
-    align-items: flex-start;
+.key-mapping {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
 }
 
 .key-mapping:not(:last-child) {
-    margin-bottom: 5px; 
-  }
+  margin-bottom: 5px;
+}
 
 .output-container {
   display: flex;
@@ -48,7 +47,6 @@ body{
 .output-container > .output-key:nth-child(3n) {
   margin-right: 0;
 }
-
 
 .input-key {
   width: 40px;
