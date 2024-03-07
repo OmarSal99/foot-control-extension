@@ -48,34 +48,12 @@ function createMapping() {
     let nameElement = document.createElement("h2");
     nameElement.innerHTML = name;
     mappingDiv.appendChild(nameElement);
-    const pidVidHolder = document.createElement("div");
-    // pidVidHolder.setAttribute("class", "key-value-holder");
-    const vidHolder = document.createElement("div");
-    vidHolder.classList.add("key-value-holder");
     const vid = document.createElement("label");
-    vid.innerHTML = "Vendor id:";
-    const vidValue = document.createElement("label");
-    vidValue.type = "text";
-    vidValue.classList.add("input-key");
-    vidValue.disabled = true;
-    // vidValue.setAttribute("value", devices[name].vid);
-    vidValue.innerHTML = devices[name].vid;
-    vidHolder.appendChild(vid);
-    vidHolder.appendChild(vidValue);
-    const pidHolder = document.createElement("div");
-    pidHolder.classList.add("key-value-holder");
+    vid.innerHTML = `Vendor id:  ${devices[name].vid}`;
     const pid = document.createElement("label");
-    pid.innerHTML = "Product id:";
-    const pidValue = document.createElement("label");
-    pidValue.type = "text";
-    pidValue.classList.add("input-key");
-    pidValue.disabled = true;
-    // pidValue.setAttribute("value", devices[name].pid);
-    pidValue.innerHTML = devices[name].pid;
-    pidHolder.appendChild(pid);
-    pidHolder.appendChild(pidValue);
-    mappingDiv.appendChild(vidHolder);
-    mappingDiv.appendChild(pidHolder);
+    pid.innerHTML = `Product id:  ${devices[name].pid}`;
+    mappingDiv.appendChild(vid);
+    mappingDiv.appendChild(pid);
 
     let device = JSON.parse(
       localStorage.getItem(
