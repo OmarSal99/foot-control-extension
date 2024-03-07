@@ -25,6 +25,31 @@ let deviceName = undefined;
 
 let deviceDetails = undefined;
 
+navigator.hid.addEventListener("disconnect", ({ device }) => {
+  if (
+    device?.productId === deviceDetails?.pid &&
+    device?.vendorId === deviceDetails?.vid
+  ) {
+    chrome.notifications.create("", {
+      title: `${deviceName} disconnected`,
+      message: `${deviceName} device with VID: ${deviceDetails.vid} and PID: ${deviceDetails.pid} has been disconnected`,
+      type: "basic",
+      iconUrl: "./image.png",
+    });
+
+    // stored the values of the just disconnected device, and reassigned the
+    // values of deviceName & deviceDetails to undefined.
+    deviceName = undefined;
+    deviceDetails = undefined;
+    chrome.runtime.sendMessage({
+      action: ACTIONS.DEVICE_CHANGED,
+      deviceName: deviceName,
+      deviceDetails: deviceDetails,
+      x: "hi",
+    });
+  }
+});
+
 let isFirstTime = true;
 // send command and return a promise, the promise is resolved when sending command is done to do clean up
 function sendCommand(tabs, key) {

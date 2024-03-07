@@ -464,6 +464,7 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
       // document.getElementById("add-button").disabled = true;
       document.getElementById("device-name").innerHTML =
         "unable to load device";
+      document.getElementById("mapping-space").innerHTML = "";
       return;
     }
     // document.getElementById("add-button").disabled = false;

@@ -18,14 +18,13 @@ export class BaseDriver {
     })[0];
     console.log(device);
     if (device) {
-      try {
-        await device.open();
-        device.addEventListener("inputreport", (event) => {
-          this.entryHandler(event, callbackFunction);
-        });
-      } catch (error) {
-        console.log(error);
+      if (device?.opened) {
+        return;
       }
+      await device.open();
+      device.addEventListener("inputreport", (event) => {
+        this.entryHandler(event, callbackFunction);
+      });
     }
   };
 }

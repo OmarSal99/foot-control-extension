@@ -29,9 +29,9 @@ label {
   font-family: Arial, sans-serif;
   font-size: 13px;
   font-weight: 600;
-  color: #333; /* Text color */
-  margin-bottom: 5px; /* Space below the label */
-  display: block; /* Make each label appear on its own line */
+  color: #333;
+  margin-bottom: 5px;
+  display: block;
 }
 
 .key-mapping:not(:last-child) {
