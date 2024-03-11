@@ -173,7 +173,7 @@ function createMapping() {
         device.pid == deviceDetails.pid && device.vid == deviceDetails.vid
     )[0];
 
-    if (connectDevice) {
+    if (connectedDevice) {
       document.getElementById("mapping-space").innerHTML = "";
       let storedObjectString = localStorage.getItem(
         LOCAL_STORAGE_KEY_MAPPING +
@@ -345,10 +345,10 @@ function createOutputField() {
 function addNewMapping() {
   let mappingDiv = document.getElementById("mapping-space");
   let newMapping = document.createElement("div");
-  newMapping.classList.add("key-mapping");
+  newMapping.classList.add("key-mapping", "gapped-row");
 
   let inputKeyLabel = document.createElement("label");
-  inputKeyLabel.innerHTML = "input:";
+  inputKeyLabel.innerHTML = "Key:";
   inputKeyLabel.classList.add("input-key-label");
   let inputKey = document.createElement("input");
   inputKey.type = "text";
@@ -365,18 +365,37 @@ function addNewMapping() {
   //   clearInterval(inputIntervalId);
   //   inputIntervalId = null;
   // });
-  newMapping.appendChild(inputKeyLabel);
-  newMapping.appendChild(inputKey);
+
+  // added by hasan - start
+  const inputLabelValueWrapper = document.createElement("div");
+  inputLabelValueWrapper.setAttribute("class", "label-value-pair");
+  inputLabelValueWrapper.appendChild(inputKeyLabel);
+  inputLabelValueWrapper.appendChild(inputKey);
+  newMapping.append(inputLabelValueWrapper);
+  //                - end
+
+  // newMapping.appendChild(inputKeyLabel);
+  // newMapping.appendChild(inputKey);
 
   let outputKeyLabel = document.createElement("label");
-  outputKeyLabel.innerHTML = "output:";
+  outputKeyLabel.innerHTML = "Mapping:";
   outputKeyLabel.classList.add("output-key-label");
   let outputContainer = document.createElement("div");
   outputContainer.classList.add("output-container");
   let outputKey = createOutputField();
-  newMapping.appendChild(outputKeyLabel);
+
+  // newMapping.appendChild(outputKeyLabel);
+  // added by hasan - start
+
+  const outputLabelValueWrapper = document.createElement("div");
+  outputLabelValueWrapper.setAttribute("class", "label-value-pair");
+  outputLabelValueWrapper.appendChild(outputKeyLabel);
   outputContainer.appendChild(outputKey);
-  newMapping.appendChild(outputContainer);
+  outputLabelValueWrapper.appendChild(outputContainer);
+  newMapping.appendChild(outputLabelValueWrapper);
+  //                -end
+  // outputContainer.appendChild(outputKey);
+  // newMapping.appendChild(outputContainer);
 
   // let addFieldButton = document.createElement("button");
   // addFieldButton.innerHTML = "+";
@@ -463,7 +482,7 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
       console.log("from popup action DEVICE_CHANGED, device name undefined");
       // document.getElementById("add-button").disabled = true;
       document.getElementById("device-name").innerHTML =
-        "unable to load device";
+        "No device connected.";
       document.getElementById("mapping-space").innerHTML = "";
       return;
     }
@@ -476,6 +495,6 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
       createMapping();
     }
 
-    document.getElementById("device-name").innerHTML = deviceName;
+    document.getElementById("device-name").innerHTML = `Connected device: ${deviceName}`;
   }
 });

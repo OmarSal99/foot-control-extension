@@ -32,9 +32,9 @@ navigator.hid.addEventListener("disconnect", ({ device }) => {
   ) {
     chrome.notifications.create("", {
       title: `${deviceName} disconnected`,
-      message: `${deviceName} device with VID: ${deviceDetails.vid} and PID: ${deviceDetails.pid} has been disconnected`,
+      message: `${deviceName} device with VID: ${deviceDetails.vid} and PID: ${deviceDetails.pid} has been disconnected.`,
       type: "basic",
-      iconUrl: "./image.png",
+      iconUrl: "./extension-logo.png",
     });
 
     // stored the values of the just disconnected device, and reassigned the
@@ -270,9 +270,9 @@ async function connectDevice(productId, vendorId) {
   if (device === undefined) {
     chrome.notifications.create("", {
       title: "Connection Failure",
-      message: "Device not supported",
+      message: "Device not supported.",
       type: "basic",
-      iconUrl: "./image.png",
+      iconUrl: "./extension-logo.png",
     });
     console.log("unable to find device in the devices-list");
     return;
@@ -302,9 +302,9 @@ async function connectDevice(productId, vendorId) {
   } catch (error) {
     chrome.notifications.create("", {
       title: "Connection Failure",
-      message: "HID device couldn't be opened",
+      message: "HID device couldn't be opened.",
       type: "basic",
-      iconUrl: "./image.png",
+      iconUrl: "./extension-logo.png",
     });
     console.log(error);
     return;
@@ -312,9 +312,9 @@ async function connectDevice(productId, vendorId) {
 
   chrome.notifications.create("", {
     title: "Connection Succeeded",
-    message: `${deviceName} with VID: ${vendorId} and PID: ${productId} has been successfully connected`,
+    message: `${deviceName} with VID: ${vendorId} and PID: ${productId} has been successfully connected.`,
     type: "basic",
-    iconUrl: "./image.png",
+    iconUrl: "./extension-logo.png",
   });
 
   deviceDetails = { pid: productId, vid: vendorId };

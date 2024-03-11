@@ -6,7 +6,7 @@
   "permissions": ["tabs", "debugger", "activeTab", "storage", "notifications"],
   "action": {
     "default_popup": "popup.html",
-    "default_icon": "image.png"
+    "default_icon": "extension-logo.png"
   },
   "content_scripts": [
     {

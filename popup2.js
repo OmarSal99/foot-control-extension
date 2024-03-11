@@ -24,7 +24,7 @@ document.addEventListener("DOMContentLoaded", function () {
           title: "Connection Failure",
           message: "Couldn't connect to device, check permissions.",
           type: "basic",
-          iconUrl: "./image.png",
+          iconUrl: "./extension-logo.png",
         });
         console.error("Error connecting to HID device:", error);
       });
@@ -46,7 +46,7 @@ function createMapping() {
     let mappingDiv = document.createElement("div");
     mappingDiv.classList.add("mapping-div");
     let nameElement = document.createElement("h2");
-    nameElement.innerHTML = name;
+    nameElement.innerHTML = `Device name: ${name}`;
     mappingDiv.appendChild(nameElement);
     const vid = document.createElement("label");
     vid.innerHTML = `Vendor id:  ${devices[name].vid}`;
@@ -125,9 +125,22 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   //indicate that something changed and recreate the mapping
   if (message.action === ACTIONS.UPDATE_KEY_MAPPING) {
     createMapping();
+  } else if (message.action === ACTIONS.DEVICE_CHANGED) {
+    if(message.deviceName){
+    document.getElementById(
+      "device-name"
+    ).textContent = `Device connected: ${message.deviceName}`;
+    } else{
+      document.getElementById(
+        "device-name"
+      ).textContent = `No device connected`;
+    }
   }
 });
 
 window.addEventListener("load", async () => {
   createMapping();
+  chrome.runtime.sendMessage({
+    action: ACTIONS.GET_DEVICE_NAME,
+  });
 });

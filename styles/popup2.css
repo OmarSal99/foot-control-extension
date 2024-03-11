@@ -1,11 +1,36 @@
+body {
+  /* height: fit-content; */
+  /* min-width: 310px; */
+  /* width: fit-content; */
+  display: flex;
+  flex-direction: column;
+  /* align-items: center; */
+  padding: 5px 30px;
+}
+
+header {
+  display: flex;
+  gap: 15px;
+  border-bottom: 2px wheat solid;
+  padding: 0 0 5px 0;
+  margin-bottom: 25px;
+  align-items: center;
+}
+
 button {
-  border-radius: 5px;
-  margin: 3px;
   background-color: #007bff;
   color: white;
-  border: 1px solid black;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  border: none;
+  border-radius: 5px;
+  padding: 0.65rem;
+  font-size: 16px;
   cursor: pointer;
+  transition: background-color 0.2s ease;
+  /* align-self: flex-end; */
+  text-align: center;
+  min-width: 70px;
+  width: fit-content;
+  white-space: nowrap;
 }
 
 button:hover {
@@ -49,7 +74,7 @@ label {
 }
 
 .input-key {
-  width: 40px;
+  width: 100px;
 }
 
 .output-key {
@@ -75,7 +100,7 @@ h2 {
   display: flex;
   flex-direction: column;
   border-radius: 15px;
-  background: linear-gradient(to right, #4da3ff, #b3d8ff);
+  background: linear-gradient(to right, #6fb3fb, #d7e8f9);
   padding-left: 10px;
   padding-bottom: 10px;
   padding-top: 5px;
@@ -88,8 +113,15 @@ h2 {
 #devices-space {
   margin-top: 10px;
 }
+
 .mapping-div:not(:last-child) {
   margin-bottom: 15px;
+}
+
+.row-elements-on-sides{
+  display: flex;
+  justify-content: space-between;
+  padding-left: 10px;
 }
 /* h2 {
   margin: 0px;
