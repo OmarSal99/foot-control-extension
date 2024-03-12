@@ -39,11 +39,9 @@ document.addEventListener("DOMContentLoaded", function () {
       inputMode = "test";
       deviceInputModeButton.textContent = "Switch to normal mode";
       const deviceInputField = document.getElementById("device-input-field");
-      device.addEventListener("inputreport", (event) => {
-        const { data, device, reportId } = event;
-        let uint8Array = new Uint8Array(data.buffer);
-        const base64String = btoa(String.fromCharCode.apply(null, uint8Array));
-        deviceInputField.value = base64String;
+      chrome.runtime.sendMessage({
+        action: ACTIONS.DEVICE_INPUT_MODE_CHANGED,
+        mode: inputMode,
       });
       // console.log(device.getEventListeners());
       // console.log(listener);
@@ -52,6 +50,10 @@ document.addEventListener("DOMContentLoaded", function () {
       deviceInputModeButton.textContent = "Switch to test mode";
       const deviceInputField = document.getElementById("device-input-field");
       deviceInputField.value = "";
+      chrome.runtime.sendMessage({
+        action: ACTIONS.DEVICE_INPUT_MODE_CHANGED,
+        mode: inputMode,
+      });
       // console.log(device.getEventListeners());
       // console.log(HIDInputReportEvent.composedPath());
     }

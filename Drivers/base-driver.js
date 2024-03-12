@@ -1,6 +1,7 @@
 export class BaseDriver {
   productId = 0x0000;
   vendorId = 0x0000;
+  hidDevice;
 
   filter = (productId, vendorId) => {
     return productId == this.productId && vendorId == this.vendorId;
@@ -18,13 +19,20 @@ export class BaseDriver {
     })[0];
     console.log(device);
     if (device) {
+      this.hidDevice = device;
       if (device?.opened) {
         return;
       }
-      await device.open();
-      device.addEventListener("inputreport", (event) => {
-        this.entryHandler(event, callbackFunction);
-      });
+      await this.hidDevice.open();
+      // device.addEventListener("inputreport", (event) => {
+      //   this.entryHandler(event, callbackFunction);
+      // });
     }
+  };
+
+  entryHandler = () => {};
+
+  close = async () => {
+    await this.hidDevice.close();
   };
 }

@@ -25,6 +25,8 @@ let deviceName = undefined;
 
 let deviceDetails = undefined;
 
+let deviceInputMode = "normal";
+
 navigator.hid.addEventListener("disconnect", ({ device }) => {
   if (
     device?.productId === deviceDetails?.pid &&
@@ -141,6 +143,11 @@ chrome.runtime.onMessage.addListener(async function (
       startPopupTimer();
       break;
 
+    case ACTIONS.DEVICE_INPUT_MODE_CHANGED:
+      deviceInputMode = message.mode;
+      console.log(deviceInputMode);
+      break;
+
     case ACTIONS.GET_DEVICE_NAME:
       chrome.runtime.sendMessage({
         action: ACTIONS.DEVICE_CHANGED,
@@ -165,7 +172,16 @@ const handleKeyInput = async (key) => {
     });
     return;
   }
-  let outputKeys = keyMapping[key];
+  let outputKeys = undefined;
+  if (deviceInputMode === "normal") {
+    outputKeys = keyMapping[key];
+  } else {
+    outputKeys = [];
+    for (const character in key) {
+      outputKeys.push({ key: character, keycode: character.charCodeAt(0) });
+    }
+  }
+  // let outputKeys = keyMapping[key];
   console.log("Input from connected device");
   console.log(key);
   if (!(Array.isArray(outputKeys) && outputKeys.length > 0)) return;
@@ -298,7 +314,8 @@ async function connectDevice(productId, vendorId) {
   // chrome.storage.local.set(storageObject, function () {});
 
   try {
-    await device.driver.open(handleKeyInput);
+    await device.driver.open();
+    device.driver.entryHandler(handleKeyInput);
   } catch (error) {
     chrome.notifications.create("", {
       title: "Connection Failure",
