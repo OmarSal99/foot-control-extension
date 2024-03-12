@@ -177,7 +177,7 @@ const handleKeyInput = async (key) => {
     outputKeys = keyMapping[key];
   } else {
     outputKeys = [];
-    for (const character in key) {
+    for (const character of key) {
       outputKeys.push({ key: character, keycode: character.charCodeAt(0) });
     }
   }
