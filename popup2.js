@@ -3,6 +3,7 @@ const LOCAL_STORAGE_ORDER_LIST = "foot pedal order list";
 
 import { ACTIONS } from "./actions.js";
 document.addEventListener("DOMContentLoaded", function () {
+  let device = undefined;
   //requst a device from webHID when button is pressed
   document.getElementById("myButton").addEventListener("click", async () => {
     await navigator.hid
@@ -13,6 +14,7 @@ document.addEventListener("DOMContentLoaded", function () {
           console.log("popup2 device choosing has been canceled 2lmafrood");
           return;
         }
+        device = devices[0];
         chrome.runtime.sendMessage({
           action: ACTIONS.DEVICE_PERM_UPDATED,
           productId: devices[0]?.productId,
@@ -28,6 +30,31 @@ document.addEventListener("DOMContentLoaded", function () {
         });
         console.error("Error connecting to HID device:", error);
       });
+  });
+
+  let inputMode = "normal";
+  const deviceInputModeButton = document.getElementById("test-mode-button");
+  deviceInputModeButton.addEventListener("click", () => {
+    if (inputMode === "normal") {
+      inputMode = "test";
+      deviceInputModeButton.textContent = "Switch to normal mode";
+      const deviceInputField = document.getElementById("device-input-field");
+      device.addEventListener("inputreport", (event) => {
+        const { data, device, reportId } = event;
+        let uint8Array = new Uint8Array(data.buffer);
+        const base64String = btoa(String.fromCharCode.apply(null, uint8Array));
+        deviceInputField.value = base64String;
+      });
+      // console.log(device.getEventListeners());
+      // console.log(listener);
+    } else if (inputMode === "test") {
+      inputMode = "normal";
+      deviceInputModeButton.textContent = "Switch to test mode";
+      const deviceInputField = document.getElementById("device-input-field");
+      deviceInputField.value = "";
+      // console.log(device.getEventListeners());
+      // console.log(HIDInputReportEvent.composedPath());
+    }
   });
 });
 
@@ -126,14 +153,18 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   if (message.action === ACTIONS.UPDATE_KEY_MAPPING) {
     createMapping();
   } else if (message.action === ACTIONS.DEVICE_CHANGED) {
-    if(message.deviceName){
-    document.getElementById(
-      "device-name"
-    ).textContent = `Device connected: ${message.deviceName}`;
-    } else{
+    if (message.deviceName) {
+      document.getElementById(
+        "device-name"
+      ).textContent = `Device connected: ${message.deviceName}`;
+      document.getElementById("test-mode-button").removeAttribute("disabled");
+    } else {
       document.getElementById(
         "device-name"
       ).textContent = `No device connected`;
+      document
+        .getElementById("test-mode-button")
+        .setAttribute("disabled", true);
     }
   }
 });

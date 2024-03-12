@@ -118,10 +118,17 @@ h2 {
   margin-bottom: 15px;
 }
 
-.row-elements-on-sides{
+.row-elements-on-sides {
   display: flex;
   justify-content: space-between;
   padding-left: 10px;
+  align-items: baseline;
+}
+
+.label-value-pair {
+  display: flex;
+  gap: 5px;
+  align-items: baseline;
 }
 /* h2 {
   margin: 0px;
