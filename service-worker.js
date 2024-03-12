@@ -156,6 +156,7 @@ chrome.runtime.onMessage.addListener(async function (
         x: "bye",
       });
       break;
+
     default:
       break;
   }
@@ -294,7 +295,6 @@ async function connectDevice(productId, vendorId) {
     return;
   }
   //driver found, send msg for popup to update the mapping to the new device name
-  deviceName = device.name;
   console.log(`PID is: ${productId}, VID is: ${vendorId}`);
   // deviceDetails = { pid: productId, vid: vendorId };
   // chrome.runtime.sendMessage({
@@ -315,11 +315,12 @@ async function connectDevice(productId, vendorId) {
 
   try {
     await device.driver.open();
-    device.driver.entryHandler(handleKeyInput);
+    device.driver.setEntryHandler(handleKeyInput);
   } catch (error) {
     chrome.notifications.create("", {
       title: "Connection Failure",
-      message: "HID device couldn't be opened.",
+      message:
+        "HID device couldn't be opened, check device access permissions.",
       type: "basic",
       iconUrl: "./extension-logo.png",
     });
@@ -334,6 +335,7 @@ async function connectDevice(productId, vendorId) {
     iconUrl: "./extension-logo.png",
   });
 
+  deviceName = device.name;
   deviceDetails = { pid: productId, vid: vendorId };
   chrome.runtime.sendMessage({
     action: ACTIONS.DEVICE_CHANGED,

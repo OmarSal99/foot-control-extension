@@ -30,7 +30,7 @@ export class BaseDriver {
     }
   };
 
-  entryHandler = () => {};
+  setEntryHandler = () => {};
 
   close = async () => {
     await this.hidDevice.close();

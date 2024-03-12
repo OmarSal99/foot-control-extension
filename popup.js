@@ -19,65 +19,65 @@ let deviceDetails = undefined;
 //the interval sends msgs to background rapidly to inform it that the user is in the input field so it pass the input from the device to the popup
 let inputIntervalId = null;
 
-function loadMappings2() {
-  const supportedDevices = [];
-  const devicesDetails = {};
-  DEVICES_LIST.forEach((device) => {
-    const filterResult = devicesMappings.filter((deviceMapping) => {
-      return (
-        device.driver.vendorId === deviceMapping.vid &&
-        device.driver.productId === deviceMapping.pid
-      );
-    })[0];
+// function loadMappings2() {
+//   const supportedDevices = [];
+//   const devicesDetails = {};
+//   DEVICES_LIST.forEach((device) => {
+//     const filterResult = devicesMappings.filter((deviceMapping) => {
+//       return (
+//         device.driver.vendorId === deviceMapping.vid &&
+//         device.driver.productId === deviceMapping.pid
+//       );
+//     })[0];
 
-    if (filterResult) {
-      filterResult["deviceName"] = device.name;
-      supportedDevices.push(filterResult);
-    }
-  });
-  console.log(supportedDevices);
+//     if (filterResult) {
+//       filterResult["deviceName"] = device.name;
+//       supportedDevices.push(filterResult);
+//     }
+//   });
+//   console.log(supportedDevices);
 
-  for (const device of supportedDevices) {
-    const mappings = {};
-    const deviceEntries = [];
-    devicesDetails[device.deviceName] = { vid: device.vid, pid: device.pid };
+//   for (const device of supportedDevices) {
+//     const mappings = {};
+//     const deviceEntries = [];
+//     devicesDetails[device.deviceName] = { vid: device.vid, pid: device.pid };
 
-    for (const key of Object.keys(device.keyMappings)) {
-      deviceEntries.push(key);
-      mappings[key] = device.keyMappings[key].map((char) => ({
-        key: char,
-        keycode: char.charCodeAt(0),
-      }));
-    }
-    localStorage.setItem(
-      LOCAL_STORAGE_ORDER_LIST +
-        "-" +
-        device.deviceName +
-        "-" +
-        device.vid +
-        "-" +
-        device.pid,
-      JSON.stringify(deviceEntries)
-    );
-    localStorage.setItem(
-      LOCAL_STORAGE_KEY_MAPPING +
-        "-" +
-        device.deviceName +
-        "-" +
-        device.vid +
-        "-" +
-        device.pid,
-      JSON.stringify(mappings)
-    );
-    localStorage.setItem(
-      LOCAL_STORAGE_KEY_MAPPING,
-      JSON.stringify(devicesDetails)
-    );
-    console.log(mappings);
-    console.log(deviceEntries);
-    console.log(device);
-  }
-}
+//     for (const key of Object.keys(device.keyMappings)) {
+//       deviceEntries.push(key);
+//       mappings[key] = device.keyMappings[key].map((char) => ({
+//         key: char,
+//         keycode: char.charCodeAt(0),
+//       }));
+//     }
+//     localStorage.setItem(
+//       LOCAL_STORAGE_ORDER_LIST +
+//         "-" +
+//         device.deviceName +
+//         "-" +
+//         device.vid +
+//         "-" +
+//         device.pid,
+//       JSON.stringify(deviceEntries)
+//     );
+//     localStorage.setItem(
+//       LOCAL_STORAGE_KEY_MAPPING +
+//         "-" +
+//         device.deviceName +
+//         "-" +
+//         device.vid +
+//         "-" +
+//         device.pid,
+//       JSON.stringify(mappings)
+//     );
+//     localStorage.setItem(
+//       LOCAL_STORAGE_KEY_MAPPING,
+//       JSON.stringify(devicesDetails)
+//     );
+//     console.log(mappings);
+//     console.log(deviceEntries);
+//     console.log(device);
+//   }
+// }
 
 function loadMapping() {
   console.log("went into loadMapping");
@@ -446,7 +446,7 @@ window.addEventListener("load", async () => {
 
   // if (deviceDetails) {
   getDeviceName();
-  loadMappings2();
+  // loadMappings2();
   // loadMapping();
   // createMapping();
   // }
@@ -481,20 +481,21 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
     if (deviceName === undefined) {
       console.log("from popup action DEVICE_CHANGED, device name undefined");
       // document.getElementById("add-button").disabled = true;
-      document.getElementById("device-name").innerHTML =
-        "No device connected.";
+      document.getElementById("device-name").innerHTML = "No device connected.";
       document.getElementById("mapping-space").innerHTML = "";
       return;
     }
     // document.getElementById("add-button").disabled = false;
     console.log(message.deviceDetails);
+    
     if (message?.deviceDetails) {
+      document.getElementById(
+        "device-name"
+      ).innerHTML = `Connected device: ${deviceName}`;
       deviceDetails = message.deviceDetails;
       // loadMapping();
       console.log(message.deviceDetails);
       createMapping();
     }
-
-    document.getElementById("device-name").innerHTML = `Connected device: ${deviceName}`;
   }
 });

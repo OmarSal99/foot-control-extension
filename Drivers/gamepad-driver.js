@@ -11,7 +11,7 @@ export class GamepadDriver extends BaseDriver {
     this.lastEntryTime = 0;
   }
 
-  entryHandler = (callbackFunction) => {
+  setEntryHandler = (callbackFunction) => {
     this.hidDevice.addEventListener("inputreport", (event) => {
       console.log("From the entry handler of the gampad driver");
       const { data, device, reportId } = event;
