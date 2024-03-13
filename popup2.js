@@ -242,7 +242,7 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
           message.deviceDetails.pid
       );
 
-      if (storedObjectString !== null) {
+      if (storedObjectString !== null && !message?.responseForGetDeviceName) {
         const keyMapping = JSON.parse(storedObjectString);
         chrome.runtime.sendMessage({
           action: ACTIONS.UPDATE_KEY_MAPPING,

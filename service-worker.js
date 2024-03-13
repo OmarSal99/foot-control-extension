@@ -175,7 +175,7 @@ chrome.runtime.onMessage.addListener(async function (
         action: ACTIONS.DEVICE_CHANGED,
         deviceName: deviceName,
         deviceDetails: deviceDetails,
-        x: "bye",
+        responseForGetDeviceName:true,
       });
       break;
 
