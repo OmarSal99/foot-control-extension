@@ -219,12 +219,12 @@ function createMapping() {
         }
       }
       // if (deviceName !== undefined) {
-      console.log(keyMapping);
-      chrome.runtime.sendMessage({
-        action: ACTIONS.UPDATE_KEY_MAPPING,
-        keyMapping: keyMapping,
-        deviceName: deviceName,
-      });
+      // console.log(keyMapping);
+      // chrome.runtime.sendMessage({
+      //   action: ACTIONS.UPDATE_KEY_MAPPING,
+      //   keyMapping: keyMapping,
+      //   deviceName: deviceName,
+      // });
       // }
     }
   }
@@ -443,14 +443,12 @@ window.addEventListener("load", async () => {
     .getElementById("connect-device-button")
     .addEventListener("click", connectDevice);
   console.log(deviceDetails);
-
   // if (deviceDetails) {
   getDeviceName();
   // loadMappings2();
   // loadMapping();
   // createMapping();
   // }
-
   // document
   //   .getElementById("add-button")
   //   .addEventListener("click", addNewMapping);
@@ -487,7 +485,7 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
     }
     // document.getElementById("add-button").disabled = false;
     console.log(message.deviceDetails);
-    
+
     if (message?.deviceDetails) {
       document.getElementById(
         "device-name"

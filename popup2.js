@@ -202,6 +202,7 @@ function loadMappings2() {
         device.pid,
       JSON.stringify(deviceEntries)
     );
+    console.log(deviceEntries);
     localStorage.setItem(
       LOCAL_STORAGE_KEY_MAPPING +
         "-" +
@@ -212,13 +213,15 @@ function loadMappings2() {
         device.pid,
       JSON.stringify(mappings)
     );
+    console.log(mappings);
     localStorage.setItem(
       LOCAL_STORAGE_KEY_MAPPING,
       JSON.stringify(devicesDetails)
     );
-    console.log(mappings);
-    console.log(deviceEntries);
-    console.log(device);
+    console.log(devicesDetails);
+    // console.log(mappings);
+    // console.log(deviceEntries);
+    // console.log(device);
   }
 }
 
@@ -238,6 +241,7 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
           "-" +
           message.deviceDetails.pid
       );
+
       if (storedObjectString !== null) {
         const keyMapping = JSON.parse(storedObjectString);
         chrome.runtime.sendMessage({
