@@ -121,7 +121,6 @@ h2 {
 .row-elements-on-sides {
   display: flex;
   justify-content: space-between;
-  padding-left: 10px;
   align-items: baseline;
 }
 

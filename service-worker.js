@@ -1,5 +1,6 @@
 import { ACTIONS } from "./actions.js";
 import { DEVICES_LIST } from "./Drivers/devices-list.js";
+import devicesMappingsSupportedByAdmin from "./another-device-mappings.json" with { type: "json" };
 
 /**
  * @typedef {Object} CharKeyCodePair
@@ -39,6 +40,11 @@ let idCounter = 0;
 
 let deviceName = undefined;
 
+/**
+ * @type Array<{deviceName: string, vendorId: number, productId: number}>
+ */
+let connectedDevices = [];
+
 let deviceDetails = undefined;
 /**Represents the way the service worker will reflect the device's input.
  *   When normal then every input will be mapped to the its corresponding
@@ -51,26 +57,48 @@ let deviceInputMode = "normal";
 // supported device and if yes then it generates a chrome notification
 // and sends a message through the extension to convey device disconnection
 navigator.hid.addEventListener("disconnect", ({ device }) => {
-  if (
-    device?.productId === deviceDetails?.pid &&
-    device?.vendorId === deviceDetails?.vid
-  ) {
-    chrome.notifications.create("", {
-      title: `${deviceName} disconnected`,
-      message: `${deviceName} device with VID: ${deviceDetails.vid} and PID: ${deviceDetails.pid} has been disconnected.`,
-      type: "basic",
-      iconUrl: "./extension-logo.png",
-    });
-
-    deviceName = undefined;
-    deviceDetails = undefined;
+  // check if the disconnected device is one of the devices that were connected
+  const disconnectedDevice = connectedDevices.find(
+    (connectedDevice) =>
+      connectedDevice.productId == device?.productId &&
+      connectedDevice.vendorId == device?.vendorId
+  );
+  if (disconnectedDevice) {
+    connectedDevices.filter((device) => device.vendorId != deviceDetails);
     chrome.runtime.sendMessage({
       action: ACTIONS.DEVICE_CHANGED,
       deviceName: deviceName,
       deviceDetails: deviceDetails,
+      connectedDevices: connectedDevices,
       x: "hi",
     });
+    chrome.notifications.create("", {
+      title: `${disconnectedDevice.deviceName} disconnected`,
+      message: `${disconnectedDevice.deviceName} device with VID: ${disconnectedDevice.vendorId} and PID: ${disconnectedDevice.productId} has been disconnected.`,
+      type: "basic",
+      iconUrl: "./extension-logo.png",
+    });
   }
+  // if (
+  //   device?.productId === deviceDetails?.pid &&
+  //   device?.vendorId === deviceDetails?.vid
+  // ) {
+  //   chrome.notifications.create("", {
+  //     title: `${deviceName} disconnected`,
+  //     message: `${deviceName} device with VID: ${deviceDetails.vid} and PID: ${deviceDetails.pid} has been disconnected.`,
+  //     type: "basic",
+  //     iconUrl: "./extension-logo.png",
+  //   });
+
+  //   deviceName = undefined;
+  //   deviceDetails = undefined;
+  //   chrome.runtime.sendMessage({
+  //     action: ACTIONS.DEVICE_CHANGED,
+  //     deviceName: deviceName,
+  //     deviceDetails: deviceDetails,
+  //     x: "hi",
+  //   });
+  // }
 });
 
 let isFirstTime = true;
@@ -153,7 +181,7 @@ chrome.runtime.onMessage.addListener(async function (
       break;
     case ACTIONS.KEY_EVENT:
       console.log("keyboard key pressed");
-      await handleKeyInput(message.key);
+      // await handleKeyInput(message.key);
       break;
 
     case ACTIONS.DEVICE_PERM_UPDATED:
@@ -171,11 +199,38 @@ chrome.runtime.onMessage.addListener(async function (
       break;
 
     case ACTIONS.GET_DEVICE_NAME:
+      console.log(connectedDevices);
       chrome.runtime.sendMessage({
         action: ACTIONS.DEVICE_CHANGED,
         deviceName: deviceName,
         deviceDetails: deviceDetails,
-        responseForGetDeviceName:true,
+        responseForGetDeviceName: true,
+        connectedDevices: connectedDevices,
+      });
+      break;
+
+    case ACTIONS.DISCONNECT_DEVICE:
+      let deviceDriverToDisconnect = undefined;
+      const productId = message.device.split("-")[2];
+      const vendorId = message.device.split("-")[1];
+      for (let i = 0; i < DEVICES_LIST.length; i++) {
+        if (DEVICES_LIST[i].driver.filter(productId, vendorId)) {
+          deviceDriverToDisconnect = DEVICES_LIST[i];
+          break;
+        }
+      }
+      await deviceDriverToDisconnect.driver.close();
+      connectedDevices = connectedDevices.filter(
+        (connectedDevice) =>
+          connectedDevice.productId != productId ||
+          connectedDevice.vendorId != vendorId
+      );
+      chrome.runtime.sendMessage({
+        action: ACTIONS.DEVICE_CHANGED,
+        deviceName: deviceName,
+        deviceDetails: deviceDetails,
+        responseForGetDeviceName: true,
+        connectedDevices: connectedDevices,
       });
       break;
 
@@ -184,7 +239,7 @@ chrome.runtime.onMessage.addListener(async function (
   }
 });
 
-const handleKeyInput = async (key) => {
+const handleKeyInput = async (deviceName, vendorId, productId, key) => {
   //resolve the input key to it output keys, it make sure that every output only run when the previous one is done
 
   //if the user is in the input field, there is no output keys instead it just send the input key to the popup
@@ -198,7 +253,8 @@ const handleKeyInput = async (key) => {
   let outputKeys = undefined;
 
   if (deviceInputMode === "normal") {
-    outputKeys = keyMapping[key];
+    outputKeys =
+      keyMapping[`${deviceName}-${vendorId}-${productId}`][key].outputKeys;
   } else if (deviceInputMode === "test") {
     outputKeys = [];
     for (const character of key) {
@@ -319,6 +375,38 @@ async function connectDevice(productId, vendorId) {
     return;
   }
 
+  let isDeviceSupportedByAdmin = false;
+  devicesMappingsSupportedByAdmin.forEach((device) => {
+    if (device.pid === productId && device.vid === vendorId) {
+      isDeviceSupportedByAdmin = true;
+    }
+  });
+  if (!isDeviceSupportedByAdmin) {
+    chrome.notifications.create("", {
+      title: "Connection Failure",
+      message:
+        "Device not supported by admin.\nContact your admin to grant support.",
+      type: "basic",
+      iconUrl: "./extension-logo.png",
+    });
+    console.log("unable to find device in the devices-list");
+    return;
+  }
+
+  if (
+    connectedDevices.some(
+      (device) => device.productId === productId && device.vendorId === vendorId
+    )
+  ) {
+    chrome.notifications.create("", {
+      title: "Already connected",
+      message: "Device you're trying to connect to is already connected.",
+      type: "basic",
+      iconUrl: "./extension-logo.png",
+    });
+    console.log("unable to find device in the devices-list");
+    return;
+  }
   console.log(`PID is: ${productId}, VID is: ${vendorId}`);
   // deviceDetails = { pid: productId, vid: vendorId };
   // chrome.runtime.sendMessage({
@@ -352,7 +440,7 @@ async function connectDevice(productId, vendorId) {
     return;
   }
 
-  deviceName = device.name;
+  deviceName = device.driver.deviceName;
   chrome.notifications.create("", {
     title: "Connection Succeeded",
     message: `${deviceName} with VID: ${vendorId} and PID: ${productId} has been successfully connected.`,
@@ -361,11 +449,17 @@ async function connectDevice(productId, vendorId) {
   });
 
   deviceDetails = { pid: productId, vid: vendorId };
+  connectedDevices.push({
+    deviceName: deviceName,
+    vendorId: vendorId,
+    productId: productId,
+  });
   // Send msg for popups to update the mapping to the new device name
   chrome.runtime.sendMessage({
     action: ACTIONS.DEVICE_CHANGED,
     deviceName: deviceName,
     deviceDetails: deviceDetails,
+    connectedDevices: connectedDevices,
     x: "hi",
   });
   console.log("sent device details");

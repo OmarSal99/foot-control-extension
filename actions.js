@@ -11,4 +11,5 @@ export const ACTIONS = {
   GET_DEVICE_NAME: "get device name",
   DEVICE_CHANGED: "device changed",
   DEVICE_INPUT_MODE_CHANGED: "device input entry mode",
+  DISCONNECT_DEVICE: "disconnect the device passed with the message",
 };

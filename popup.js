@@ -4,6 +4,7 @@ import devicesMappings from "./devices-mappings.json" assert { type: "json" };
 
 const LOCAL_STORAGE_KEY_MAPPING = "foot pedal key mapping";
 const LOCAL_STORAGE_ORDER_LIST = "foot pedal order list";
+const LOCAL_STORAGE_ALL_DEVICES_KEY_MAPPINGS = "all devices key mappings";
 
 //dictionary that actually store the mapping, key: []
 //the key (string) is the input and the array contains a list of the ouputs
@@ -159,74 +160,125 @@ function loadMapping() {
       //   );
       // }
 
-      createMapping();
+      // createMapping();
     }
   }
 }
 
 //initial function that will run when the device changes (or when open the popup for the first time)
 //it load the stored data for that device name to the ui and update keymapping
-function createMapping() {
-  if (deviceName !== undefined && deviceDetails !== undefined) {
-    const connectedDevice = devicesMappings.filter(
-      (device) =>
-        device.pid == deviceDetails.pid && device.vid == deviceDetails.vid
-    )[0];
+function createMapping(connectedDevices) {
+  if (connectedDevices) {
+    // document.getElementById("mapping-space").innerHTML = "";
+    // let storedObjectString = localStorage.getItem(
+    //   LOCAL_STORAGE_KEY_MAPPING +
+    //     "-" +
+    //     deviceName +
+    //     "-" +
+    //     deviceDetails.vid +
+    //     "-" +
+    //     deviceDetails.pid
+    // );
+    // let storedOrderList = JSON.parse(
+    //   localStorage.getItem(
+    //     LOCAL_STORAGE_ORDER_LIST +
+    //       "-" +
+    //       deviceName +
+    //       "-" +
+    //       deviceDetails.vid +
+    //       "-" +
+    //       deviceDetails.pid
+    //   )
+    // );
+    let allsupportedDevicesKeyMappings = JSON.parse(
+      localStorage.getItem(LOCAL_STORAGE_ALL_DEVICES_KEY_MAPPINGS)
+    );
 
-    if (connectedDevice) {
-      document.getElementById("mapping-space").innerHTML = "";
-      let storedObjectString = localStorage.getItem(
-        LOCAL_STORAGE_KEY_MAPPING +
-          "-" +
-          deviceName +
-          "-" +
-          deviceDetails.vid +
-          "-" +
-          deviceDetails.pid
-      );
-      let storedOrderList = JSON.parse(
-        localStorage.getItem(
-          LOCAL_STORAGE_ORDER_LIST +
-            "-" +
-            deviceName +
-            "-" +
-            deviceDetails.vid +
-            "-" +
-            deviceDetails.pid
-        )
-      );
-      orderList = storedOrderList !== null ? storedOrderList : [];
-      if (storedObjectString !== null) {
-        keyMapping = JSON.parse(storedObjectString);
-        console.log(keyMapping);
-        for (let i = 0; i < orderList.length; i++) {
-          if (keyMapping.hasOwnProperty(orderList[i])) {
-            let outputKeys = keyMapping[orderList[i]];
-            if (Array.isArray(outputKeys) && outputKeys.length === 0) continue;
-            let mapping = addNewMapping();
-            mapping.querySelector(".input-key").value = orderList[i];
-            let outputField = mapping.querySelector(".output-key");
-            outputField.value = outputKeys[0].key;
-            outputField.setAttribute("keycode", outputKeys[0].keycode);
-            for (let i = 1; i < outputKeys.length; i++) {
-              let newOutputField = addOutputField(
-                mapping.querySelector(".output-container")
-              );
-              newOutputField.value = outputKeys[i].key;
-              newOutputField.setAttribute("keycode", outputKeys[i].keycode);
+    if (allsupportedDevicesKeyMappings) {
+      const devicesMappingsSpaceElement =
+        document.getElementById("devices-mappings");
+      connectedDevices.forEach((connectedDevice) => {
+        const deviceSpaceElement = document.createElement("div");
+        const deviceNameVIDPIDAsKey = `${connectedDevice.deviceName}-${connectedDevice.vendorId}-${connectedDevice.productId}`;
+        deviceSpaceElement.setAttribute("id", deviceNameVIDPIDAsKey);
+        deviceSpaceElement.setAttribute("class", "device-space");
+        console.log(deviceNameVIDPIDAsKey);
+        const deviceNameElement = document.createElement("h3");
+        deviceNameElement.textContent = connectedDevice.deviceName;
+        deviceSpaceElement.appendChild(deviceNameElement);
+        for (
+          let i = 0;
+          i <
+          Object.keys(allsupportedDevicesKeyMappings[deviceNameVIDPIDAsKey])
+            ?.length;
+          i++
+        ) {
+          let deviceInputKeyToShow = undefined;
+          Object.keys(
+            allsupportedDevicesKeyMappings[deviceNameVIDPIDAsKey]
+          ).forEach((deviceInputKey) => {
+            if (
+              allsupportedDevicesKeyMappings[deviceNameVIDPIDAsKey][
+                deviceInputKey
+              ].order ==
+              i + 1
+            ) {
+              let mapping = addNewMapping();
+              // mapping.querySelector(".input-key").value = orderList[i];
+              mapping.querySelector(".input-key").value = deviceInputKey;
+              let outputField = mapping.querySelector(".output-key");
+              const outputKeys =
+                allsupportedDevicesKeyMappings[deviceNameVIDPIDAsKey][
+                  deviceInputKey
+                ].outputKeys;
+              outputField.value = outputKeys[0].key;
+              outputField.setAttribute("keycode", outputKeys[0].keycode);
+              for (let i = 1; i < outputKeys.length; i++) {
+                let newOutputField = addOutputField(
+                  mapping.querySelector(".output-container")
+                );
+                newOutputField.value = outputKeys[i].key;
+                newOutputField.setAttribute("keycode", outputKeys[i].keycode);
+              }
+              deviceSpaceElement.appendChild(mapping);
             }
-          }
+          });
         }
-      }
-      // if (deviceName !== undefined) {
-      // console.log(keyMapping);
-      // chrome.runtime.sendMessage({
-      //   action: ACTIONS.UPDATE_KEY_MAPPING,
-      //   keyMapping: keyMapping,
-      //   deviceName: deviceName,
-      // });
-      // }
+        devicesMappingsSpaceElement.appendChild(deviceSpaceElement);
+      });
+      // Object.keys(allsupportedDevicesKeyMappings).forEach((device) => {});
     }
+    // orderList = storedOrderList !== null ? storedOrderList : [];
+    // if (storedObjectString !== null) {
+    //   keyMapping = JSON.parse(storedObjectString);
+    //   console.log(keyMapping);
+    //   for (let i = 0; i < orderList.length; i++) {
+    //     if (keyMapping.hasOwnProperty(orderList[i])) {
+    //       let outputKeys = keyMapping[orderList[i]];
+    //       if (Array.isArray(outputKeys) && outputKeys.length === 0) continue;
+    //       let mapping = addNewMapping();
+    //       mapping.querySelector(".input-key").value = orderList[i];
+    //       let outputField = mapping.querySelector(".output-key");
+    //       outputField.value = outputKeys[0].key;
+    //       outputField.setAttribute("keycode", outputKeys[0].keycode);
+    //       for (let i = 1; i < outputKeys.length; i++) {
+    //         let newOutputField = addOutputField(
+    //           mapping.querySelector(".output-container")
+    //         );
+    //         newOutputField.value = outputKeys[i].key;
+    //         newOutputField.setAttribute("keycode", outputKeys[i].keycode);
+    //       }
+    //     }
+    //   }
+    // }
+    // if (deviceName !== undefined) {
+    // console.log(keyMapping);
+    // chrome.runtime.sendMessage({
+    //   action: ACTIONS.UPDATE_KEY_MAPPING,
+    //   keyMapping: keyMapping,
+    //   deviceName: deviceName,
+    // });
+    // }
   }
 }
 
@@ -343,7 +395,8 @@ function createOutputField() {
 
 //add new mapping row
 function addNewMapping() {
-  let mappingDiv = document.getElementById("mapping-space");
+  let mappingDiv = document.createElement("div");
+  mappingDiv.setAttribute("id", "mapping-space");
   let newMapping = document.createElement("div");
   newMapping.classList.add("key-mapping", "gapped-row");
 
@@ -476,24 +529,22 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
     //background will send a msg containing the current device name if it changed or after a device name request
     deviceName = message.deviceName;
     console.log("device name is", deviceName);
-    if (deviceName === undefined) {
+    if (deviceName === undefined || message.connectedDevices?.length <= 0) {
       console.log("from popup action DEVICE_CHANGED, device name undefined");
       // document.getElementById("add-button").disabled = true;
       document.getElementById("device-name").innerHTML = "No device connected.";
-      document.getElementById("mapping-space").innerHTML = "";
+      // document.getElementById("mapping-space").innerHTML = "";
       return;
     }
     // document.getElementById("add-button").disabled = false;
     console.log(message.deviceDetails);
 
     if (message?.deviceDetails) {
-      document.getElementById(
-        "device-name"
-      ).innerHTML = `Connected device: ${deviceName}`;
+      document.getElementById("device-name").innerHTML = `Connected devices:`;
       deviceDetails = message.deviceDetails;
       // loadMapping();
       console.log(message.deviceDetails);
-      createMapping();
+      createMapping(message.connectedDevices);
     }
   }
 });

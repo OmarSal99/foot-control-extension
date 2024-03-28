@@ -3,6 +3,7 @@ import { BaseDriver } from "./base-driver.js";
 export class GamepadDriver extends BaseDriver {
   productId = 0x5341;
   vendorId = 0x03f0;
+  deviceName = "Gamepad";
   // productId = 0x0006;
   // vendorId = 0x0079;
 
@@ -34,7 +35,12 @@ export class GamepadDriver extends BaseDriver {
           console.log(base64String);
           console.log(uint8Array);
           this.lastEntryTime = currentTime;
-          callbackFunction(base64String);
+          callbackFunction(
+            this.deviceName,
+            this.vendorId,
+            this.productId,
+            base64String
+          );
         }
       }
     });

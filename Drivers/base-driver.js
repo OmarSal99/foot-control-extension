@@ -2,6 +2,7 @@ export class BaseDriver {
   productId = 0x0000;
   vendorId = 0x0000;
   hidDevice;
+  deviceName;
 
   filter = (productId, vendorId) => {
     return productId == this.productId && vendorId == this.vendorId;
@@ -33,6 +34,7 @@ export class BaseDriver {
   setEntryHandler = () => {};
 
   close = async () => {
+    console.log(this.hidDevice);
     await this.hidDevice.close();
   };
 }

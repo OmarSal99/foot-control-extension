@@ -1,0 +1,26 @@
+[
+  {
+    "pid": 21313,
+    "vid": 1008,
+    "keyMappings": {
+      "f39/f39PAMA=": {
+        "label": "X",
+        "outputKeys": ["c", "h", "r", "o", "m", "e"]
+      },
+      "f39/f3+PAMA=": { "label": "O", "outputKeys": [" "] },
+      "f39/f38fAMA=": { "label": "R1", "outputKeys": ["o", "s"] }
+    }
+  },
+  {
+    "pid": 2590,
+    "vid": 32903,
+    "keyMappings": {
+      "whatever": {
+        "label": "Start",
+        "outputKeys": ["S"]
+      },
+      "what1": { "label": "Next", "outputKeys": ["D"] },
+      "f39/f38fAMA=": { "label": "Previous", "outputKeys": ["A"] }
+    }
+  }
+]
