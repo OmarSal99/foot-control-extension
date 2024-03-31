@@ -107,6 +107,7 @@ function sendCommand(tabs, key) {
   return new Promise((resolve, reject) => {
     chrome.debugger.attach({ tabId: tabs[0].id }, "1.0", async function () {
       await new Promise((resolve, reject) => {
+        console.log(`Key typed is: ${key}`)
         chrome.debugger.sendCommand(
           { tabId: tabs[0].id },
           "Input.dispatchKeyEvent",
@@ -233,6 +234,10 @@ chrome.runtime.onMessage.addListener(async function (
         connectedDevices: connectedDevices,
       });
       break;
+
+      case ACTIONS.TEST_INPUT_SIMULATION:
+        handleKeyInput("Gamepad",1008, 21313, "f39/f39PAMA=");
+        break;
 
     default:
       break;

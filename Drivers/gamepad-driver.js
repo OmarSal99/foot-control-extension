@@ -1,11 +1,11 @@
 import { BaseDriver } from "./base-driver.js";
 
 export class GamepadDriver extends BaseDriver {
-  productId = 0x5341;
-  vendorId = 0x03f0;
+  productId = 21313;
+  vendorId = 1008;
   deviceName = "Gamepad";
-  // productId = 0x0006;
-  // vendorId = 0x0079;
+  // productId = 6;
+  // vendorId = 121;
 
   constructor() {
     super();

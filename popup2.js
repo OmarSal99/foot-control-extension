@@ -58,6 +58,10 @@ document.addEventListener("DOMContentLoaded", function () {
       });
     }
   });
+
+  document.getElementById("test-input-button").addEventListener("click", () => {
+    chrome.runtime.sendMessage({ action: ACTIONS.TEST_INPUT_SIMULATION });
+  });
 });
 
 window.addEventListener("load", async () => {
@@ -97,14 +101,17 @@ function showMappings() {
       const deviceDivHeader = document.createElement("div");
       deviceDivHeader.setAttribute("class", "row-elements-on-sides");
       const disconnectButton = document.createElement("button");
-      disconnectButton.setAttribute("id", `${someDeviceKeyMappingsKey}-disconnect-button`);
+      disconnectButton.setAttribute(
+        "id",
+        `${someDeviceKeyMappingsKey}-disconnect-button`
+      );
       disconnectButton.setAttribute("disabled", true);
       disconnectButton.innerHTML = "Disconnect";
-      disconnectButton.setAttribute("style", "margin-right: 15px")
+      disconnectButton.setAttribute("style", "margin-right: 15px");
       disconnectButton.addEventListener("click", () => {
         disconnectDevice(someDeviceKeyMappingsKey);
         disconnectButton.setAttribute("disabled", true);
-      })
+      });
       let nameElement = document.createElement("h2");
       nameElement.innerHTML = `Device name: ${deviceDetails.name}`;
       deviceDivHeader.appendChild(nameElement);
@@ -139,18 +146,20 @@ function showMappings() {
         inputElement.type = "text";
         inputElement.classList.add("input-key");
         inputElement.disabled = true;
-        let deviceInputKeyToShow = undefined
-        Object.keys(allsupportedDevicesKeyMappings[
-          someDeviceKeyMappingsKey
-        ]).forEach((deviceInputKey) => {
-          if(allsupportedDevicesKeyMappings[someDeviceKeyMappingsKey][
-            deviceInputKey
-          ].order ==
-          i + 1){
+        let deviceInputKeyToShow = undefined;
+        Object.keys(
+          allsupportedDevicesKeyMappings[someDeviceKeyMappingsKey]
+        ).forEach((deviceInputKey) => {
+          if (
+            allsupportedDevicesKeyMappings[someDeviceKeyMappingsKey][
+              deviceInputKey
+            ].order ==
+            i + 1
+          ) {
             deviceInputKeyToShow = deviceInputKey;
             inputElement.value = deviceInputKey;
           }
-        }) 
+        });
         keyMapping.appendChild(inputElement);
 
         let outputKeyLabel = document.createElement("label");
@@ -189,10 +198,10 @@ function showMappings() {
 }
 
 /**
- * 
+ *
  * @param {string} device Holds device's details on this form name-vid-pid
  */
-function disconnectDevice(device){
+function disconnectDevice(device) {
   chrome.runtime.sendMessage({
     action: ACTIONS.DISCONNECT_DEVICE,
     device: device,
@@ -286,7 +295,11 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   if (message.action === ACTIONS.UPDATE_KEY_MAPPING) {
     showMappings();
   } else if (message.action === ACTIONS.DEVICE_CHANGED) {
-    if (message.deviceName && message.deviceDetails && message.connectedDevices?.length > 0) {
+    if (
+      message.deviceName &&
+      message.deviceDetails &&
+      message.connectedDevices?.length > 0
+    ) {
       let storedObjectString = localStorage.getItem(
         LOCAL_STORAGE_KEY_MAPPING +
           "-" +
@@ -299,19 +312,27 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
 
       if (storedObjectString !== null && !message?.responseForGetDeviceName) {
         const keyMapping = JSON.parse(storedObjectString);
-        console.log(message.connectedDevices)
-        const allsupportedDevicesKeyMappings = JSON.parse(localStorage.getItem(LOCAL_STORAGE_ALL_DEVICES_KEY_MAPPINGS));
+        console.log(message.connectedDevices);
+        const allsupportedDevicesKeyMappings = JSON.parse(
+          localStorage.getItem(LOCAL_STORAGE_ALL_DEVICES_KEY_MAPPINGS)
+        );
         chrome.runtime.sendMessage({
           action: ACTIONS.UPDATE_KEY_MAPPING,
           keyMapping: allsupportedDevicesKeyMappings,
           deviceName: message.deviceName,
         });
       }
-      let connectedDevicesNames = ""
+      let connectedDevicesNames = "";
       message.connectedDevices.forEach((connectedDevice, index) => {
-        connectedDevicesNames += `${index == 0 ? "" : ", "}${connectedDevice.deviceName}`;
-        document.getElementById(`${connectedDevice.deviceName}-${connectedDevice.vendorId}-${connectedDevice.productId}-disconnect-button`).removeAttribute("disabled");
-      })
+        connectedDevicesNames += `${index == 0 ? "" : ", "}${
+          connectedDevice.deviceName
+        }`;
+        document
+          .getElementById(
+            `${connectedDevice.deviceName}-${connectedDevice.vendorId}-${connectedDevice.productId}-disconnect-button`
+          )
+          .removeAttribute("disabled");
+      });
       document.getElementById(
         "device-name"
       ).textContent = `Devices connected: ${connectedDevicesNames}`;
