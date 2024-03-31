@@ -259,7 +259,7 @@ const handleKeyInput = async (deviceName, vendorId, productId, key) => {
 
   if (deviceInputMode === "normal") {
     outputKeys =
-      keyMapping[`${deviceName}-${vendorId}-${productId}`][key].outputKeys;
+      keyMapping[`${deviceName}-${vendorId}-${productId}`][key]?.outputKeys;
   } else if (deviceInputMode === "test") {
     outputKeys = [];
     for (const character of key) {
