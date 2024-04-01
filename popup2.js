@@ -6,6 +6,8 @@ import { DEVICES_LIST } from "./Drivers/devices-list.js";
 import { ACTIONS } from "./actions.js";
 import devicesMappings from "./another-device-mappings.json" with { type: "json" };
 
+let connectedDevices = [];
+
 document.addEventListener("DOMContentLoaded", function () {
   let device = undefined;
   loadMappings2();
@@ -20,6 +22,7 @@ document.addEventListener("DOMContentLoaded", function () {
           return;
         }
         device = devices[0];
+        console.log(device)
         chrome.runtime.sendMessage({
           action: ACTIONS.DEVICE_PERM_UPDATED,
           productId: devices[0]?.productId,
@@ -75,11 +78,19 @@ window.addEventListener("load", async () => {
 //the local storage is teh same as popup so it just read from it and rely on popup to make any updates on it
 function showMappings() {
   let devices = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_MAPPING));
-  const allsupportedDevicesKeyMappings = JSON.parse(
+  let allsupportedDevicesKeyMappings = JSON.parse(
     localStorage.getItem(LOCAL_STORAGE_ALL_DEVICES_KEY_MAPPINGS)
   );
+  const userDefinedDevicesKeysMappings = JSON.parse(
+    localStorage.getItem("USER_EDITED_DEVICES_KEY_MAPPINGS")
+  );
+  if(userDefinedDevicesKeysMappings){
+    allsupportedDevicesKeyMappings = userDefinedDevicesKeysMappings;
+  }
+  console.log(userDefinedDevicesKeysMappings);
   console.log("devices are", devices);
   let devicesSpace = document.getElementById("devices-space");
+
   while (devicesSpace.firstChild) {
     devicesSpace.removeChild(devicesSpace.firstChild);
   }
@@ -105,7 +116,14 @@ function showMappings() {
         "id",
         `${someDeviceKeyMappingsKey}-disconnect-button`
       );
-      disconnectButton.setAttribute("disabled", true);
+      connectedDevices.some(
+        (connectedDevice) =>
+          connectedDevice.deviceName == deviceDetails.name &&
+          connectedDevice.productId == deviceDetails.productId &&
+          connectedDevice.vendorId == deviceDetails.vendorId
+      )
+        ? undefined
+        : disconnectButton.setAttribute("disabled", true);
       disconnectButton.innerHTML = "Disconnect";
       disconnectButton.setAttribute("style", "margin-right: 15px");
       disconnectButton.addEventListener("click", () => {
@@ -169,6 +187,7 @@ function showMappings() {
 
         let outputContainer = document.createElement("div");
         outputContainer.classList.add("output-container");
+        console.log(deviceInputKeyToShow)
         for (
           let j = 0;
           j <
@@ -316,9 +335,10 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
         const allsupportedDevicesKeyMappings = JSON.parse(
           localStorage.getItem(LOCAL_STORAGE_ALL_DEVICES_KEY_MAPPINGS)
         );
+        const userDefinedDeviceMappings = JSON.parse(localStorage.getItem("USER_EDITED_DEVICES_KEY_MAPPINGS"));
         chrome.runtime.sendMessage({
           action: ACTIONS.UPDATE_KEY_MAPPING,
-          keyMapping: allsupportedDevicesKeyMappings,
+          keyMapping: userDefinedDeviceMappings ? userDefinedDeviceMappings : allsupportedDevicesKeyMappings,
           deviceName: message.deviceName,
         });
       }
@@ -337,6 +357,7 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
         "device-name"
       ).textContent = `Devices connected: ${connectedDevicesNames}`;
       document.getElementById("test-mode-button").removeAttribute("disabled");
+      connectedDevices = message.connectedDevices;
     } else {
       document.getElementById(
         "device-name"

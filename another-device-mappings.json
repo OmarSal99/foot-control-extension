@@ -8,12 +8,13 @@
         "outputKeys": ["c", "h", "r", "o", "m", "e"]
       },
       "f39/f3+PAMA=": { "label": "O", "outputKeys": [" "] },
-      "f39/f38fAMA=": { "label": "R1", "outputKeys": ["o", "s"] }
+      "f39/f38fAMA=": { "label": "R1", "outputKeys": ["o", "s"] },
+      "hi": { "label": "R1", "outputKeys": ["h", ""] }
     }
   },
   {
-    "pid": 2590,
-    "vid": 32903,
+    "pid": 360,
+    "vid": 62345,
     "keyMappings": {
       "whatever": {
         "label": "Start",

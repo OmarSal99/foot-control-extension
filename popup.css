@@ -4,12 +4,11 @@ button {
   border: none;
   border-radius: 5px;
   padding: 0.65rem;
-  font-size: 16px;
+  /* font-size: 10px; */
   cursor: pointer;
   transition: background-color 0.2s ease;
   align-self: flex-end;
   text-align: center;
-  min-width: 70px;
   width: fit-content;
   white-space: nowrap;
   /* border-radius: 5px;
@@ -52,7 +51,8 @@ header {
 
 .key-mapping {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
+  gap: 5px;
   align-items: flex-start;
 }
 
@@ -78,6 +78,7 @@ header {
 
 .input-key {
   width: 100px;
+  height: fit-content;
   padding: 2px;
 }
 
@@ -100,6 +101,9 @@ header {
   display: flex;
   gap: 3px;
 }
+input{
+  width: fit-content;
+}
 
 .device-space {
   margin-bottom: 15px;
@@ -107,5 +111,6 @@ header {
 
 .gapped-row {
   display: flex;
-  gap: 15px;
+  gap: 10px;
+  align-self: flex-end;
 }

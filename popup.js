@@ -12,6 +12,10 @@ let keyMapping = {};
 //a list to store the order of keys from keymapping that apear in the ui
 let orderList = [];
 
+let allsupportedDevicesKeyMappings = {};
+
+let connectedDevices = [];
+
 //the current device name that the keymapping is for
 let deviceName = undefined;
 // The current device details pid and vid
@@ -190,10 +194,18 @@ function createMapping(connectedDevices) {
     //       deviceDetails.pid
     //   )
     // );
-    let allsupportedDevicesKeyMappings = JSON.parse(
+    allsupportedDevicesKeyMappings = JSON.parse(
       localStorage.getItem(LOCAL_STORAGE_ALL_DEVICES_KEY_MAPPINGS)
     );
 
+    const userDefinedDevicesMappings = JSON.parse(
+      localStorage.getItem("USER_EDITED_DEVICES_KEY_MAPPINGS")
+    );
+    if (userDefinedDevicesMappings) {
+      allsupportedDevicesKeyMappings = userDefinedDevicesMappings;
+    }
+
+    allsupportedDevicesKeyMappings;
     if (allsupportedDevicesKeyMappings) {
       const devicesMappingsSpaceElement =
         document.getElementById("devices-mappings");
@@ -285,79 +297,114 @@ function createMapping(connectedDevices) {
 //this run every time user change something in the ui, it distroy the old keymapping and rebuild it based on the ui
 //a msg indicate that the mapping update is sent with the new mapping
 function updateMapping() {
-  keyMapping = {};
-  let mappingDiv = document.getElementById("mapping-space");
-  let keyMappingList = mappingDiv.querySelectorAll(".key-mapping");
-  orderList = [];
-  Array.from(keyMappingList).forEach(function (parentDiv) {
-    let inputKey = parentDiv.querySelector(".input-key").value;
-    let outputFields = parentDiv.querySelectorAll(".output-key");
-    if (inputKey in keyMapping || inputKey === "") return;
-    keyMapping[inputKey] = [];
-    for (let i = 0; i < outputFields.length; i++) {
-      if (outputFields[i].value !== "") {
-        keyMapping[inputKey].push({
-          key: outputFields[i].value,
-          keycode: outputFields[i].getAttribute("keycode"),
-        });
+  // keyMapping = {};
+  console.log(allsupportedDevicesKeyMappings);
+  for (const connectedDevice of connectedDevices) {
+    const someDeviceKeyMappings = {};
+    const device = `${connectedDevice.deviceName}-${connectedDevice.vendorId}-${connectedDevice.productId}`;
+    console.log(device);
+    const deviceMappingsHolderElement = document.getElementById(device);
+    console.log(deviceMappingsHolderElement);
+    const keyMappingList =
+      deviceMappingsHolderElement.querySelectorAll(".key-mapping");
+    Array.from(keyMappingList).forEach((parentDiv, index) => {
+      let inputKey = parentDiv.querySelector(".input-key").value;
+      let outputFields = parentDiv.querySelectorAll(".output-key");
+      // if (inputKey in allsupportedDevicesKeyMappings[device] || inputKey === "") return;
+      if (inputKey === "") return;
+      someDeviceKeyMappings[inputKey] = { outputKeys: [], order: index + 1 };
+      // allsupportedDevicesKeyMappings[device][inputKey].outputKeys = [];
+      // allsupportedDevicesKeyMappings[device][inputKey].order = index + 1;
+      for (let i = 0; i < outputFields.length; i++) {
+        if (outputFields[i].value !== "") {
+          someDeviceKeyMappings[inputKey].outputKeys.push({
+            key: outputFields[i].value,
+            keycode: outputFields[i].getAttribute("keycode"),
+          });
+        }
       }
-    }
-    orderList.push(inputKey);
-  });
-  localStorage.setItem(
-    LOCAL_STORAGE_ORDER_LIST +
-      "-" +
-      deviceName +
-      "-" +
-      deviceDetails.vid +
-      "-" +
-      deviceDetails.pid,
-    JSON.stringify(orderList)
-  );
-  localStorage.setItem(
-    LOCAL_STORAGE_KEY_MAPPING +
-      "-" +
-      deviceName +
-      "-" +
-      deviceDetails.vid +
-      "-" +
-      deviceDetails.pid,
-    JSON.stringify(keyMapping)
-  );
-  let devices = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_MAPPING));
-  if (devices === null && Object.keys(keyMapping).length !== 0) {
-    devices = {};
-    // devices[deviceName] = true;
-    devices[deviceName] = { vid: deviceDetails.vid, pid: deviceDetails.pid };
-    localStorage.setItem(LOCAL_STORAGE_KEY_MAPPING, JSON.stringify(devices));
-  } else if (
-    devices[deviceName] === undefined &&
-    Object.keys(keyMapping).length !== 0
-  ) {
-    // devices[deviceName] = true;
-    devices[deviceName] = { vid: deviceDetails.vid, pid: deviceDetails.pid };
-    localStorage.setItem(LOCAL_STORAGE_KEY_MAPPING, JSON.stringify(devices));
-  } else if (
-    devices[deviceName] !== undefined &&
-    Object.keys(keyMapping).length === 0
-  ) {
-    delete devices[deviceName];
-    localStorage.setItem(LOCAL_STORAGE_KEY_MAPPING, JSON.stringify(devices));
+      // orderList.push(inputKey);
+    });
+    allsupportedDevicesKeyMappings[device] = someDeviceKeyMappings;
   }
+
+  // let mappingDiv = document.getElementById("mapping-space");
+  // let keyMappingList = mappingDiv.querySelectorAll(".key-mapping");
+  // orderList = [];
+  // Array.from(keyMappingList).forEach(function (parentDiv) {
+  //   let inputKey = parentDiv.querySelector(".input-key").value;
+  //   let outputFields = parentDiv.querySelectorAll(".output-key");
+  //   if (inputKey in keyMapping || inputKey === "") return;
+  //   keyMapping[inputKey] = [];
+  //   for (let i = 0; i < outputFields.length; i++) {
+  //     if (outputFields[i].value !== "") {
+  //       keyMapping[inputKey].push({
+  //         key: outputFields[i].value,
+  //         keycode: outputFields[i].getAttribute("keycode"),
+  //       });
+  //     }
+  //   }
+  //   orderList.push(inputKey);
+  // });
+  // localStorage.setItem(
+  //   LOCAL_STORAGE_ORDER_LIST +
+  //     "-" +
+  //     deviceName +
+  //     "-" +
+  //     deviceDetails.vid +
+  //     "-" +
+  //     deviceDetails.pid,
+  //   JSON.stringify(orderList)
+  // );
+  // localStorage.setItem(
+  //   LOCAL_STORAGE_KEY_MAPPING +
+  //     "-" +
+  //     deviceName +
+  //     "-" +
+  //     deviceDetails.vid +
+  //     "-" +
+  //     deviceDetails.pid,
+  //   JSON.stringify(keyMapping)
+  // );
+  // let devices = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_MAPPING));
+  // if (devices === null && Object.keys(keyMapping).length !== 0) {
+  //   devices = {};
+  //   // devices[deviceName] = true;
+  //   devices[deviceName] = { vid: deviceDetails.vid, pid: deviceDetails.pid };
+  //   localStorage.setItem(LOCAL_STORAGE_KEY_MAPPING, JSON.stringify(devices));
+  // } else if (
+  //   devices[deviceName] === undefined &&
+  //   Object.keys(keyMapping).length !== 0
+  // ) {
+  //   // devices[deviceName] = true;
+  //   devices[deviceName] = { vid: deviceDetails.vid, pid: deviceDetails.pid };
+  //   localStorage.setItem(LOCAL_STORAGE_KEY_MAPPING, JSON.stringify(devices));
+  // } else if (
+  //   devices[deviceName] !== undefined &&
+  //   Object.keys(keyMapping).length === 0
+  // ) {
+  //   delete devices[deviceName];
+  //   localStorage.setItem(LOCAL_STORAGE_KEY_MAPPING, JSON.stringify(devices));
+  // }
+
+  localStorage.setItem(
+    "USER_EDITED_DEVICES_KEY_MAPPINGS",
+    JSON.stringify(allsupportedDevicesKeyMappings)
+  );
   chrome.runtime.sendMessage({
     action: ACTIONS.UPDATE_KEY_MAPPING,
-    keyMapping: keyMapping,
+    keyMapping: allsupportedDevicesKeyMappings,
     deviceName: deviceName,
   });
   console.log(keyMapping);
 }
 
-//delete a key mapping (row)
-// function deleteMapping(event) {
-//   let parentDiv = event.target.parentNode;
-//   parentDiv.remove();
-//   updateMapping();
-// }
+// delete a key mapping (row)
+function deleteMapping(event) {
+  let parentDiv = event.target.parentNode.parentNode;
+  parentDiv.remove();
+  updateMapping();
+}
 
 //create output field and place it inside this
 function addOutputField(parentDiv) {
@@ -372,33 +419,39 @@ function createOutputField() {
   outputKey.type = "text";
   outputKey.classList.add("output-key");
   outputKey.setAttribute("keycode", "");
-  // outputKey.onkeydown = function (event) {
-  //   outputKey.value = event.key;
-  //   outputKey.setAttribute(
-  //     "keycode",
-  //     event.key.match(/^[a-z]$/) ? event.key.charCodeAt(0) : event.keyCode
-  //   );
-  //   event.preventDefault();
-  //   updateMapping();
-  // };
+  outputKey.onkeydown = function (event) {
+    outputKey.value = event.key;
+    outputKey.setAttribute(
+      "keycode",
+      event.key.match(/^[a-z]$/) ? event.key.charCodeAt(0) : event.keyCode
+    );
+    event.preventDefault();
+    updateMapping();
+  };
   return outputKey;
 }
 
-// function setInputInterval() {
-//   if (inputIntervalId !== null) clearInterval(inputIntervalId);
-//   inputIntervalId = setInterval(() => {
-//     chrome.runtime.sendMessage({
-//       action: ACTIONS.POPUP_IN_INPUT_FIELD,
-//     });
-//   }, 100);
-// }
+/**
+ * Send an action to service worker to tell it that the entry of the device is
+ *     to take it as raw not converted to the mapping set.
+ */
+function setInputInterval() {
+  if (inputIntervalId !== null) clearInterval(inputIntervalId);
+  inputIntervalId = setInterval(() => {
+    chrome.runtime.sendMessage({
+      action: ACTIONS.POPUP_IN_INPUT_FIELD,
+    });
+  }, 100);
+}
 
 //add new mapping row
 function addNewMapping() {
   let mappingDiv = document.createElement("div");
   mappingDiv.setAttribute("id", "mapping-space");
   let newMapping = document.createElement("div");
-  newMapping.classList.add("key-mapping", "gapped-row");
+  newMapping.classList.add("key-mapping");
+  const keyAndMappingHolder = document.createElement("div");
+  keyAndMappingHolder.setAttribute("class", "gapped-row");
 
   let inputKeyLabel = document.createElement("label");
   inputKeyLabel.innerHTML = "Key:";
@@ -406,25 +459,25 @@ function addNewMapping() {
   let inputKey = document.createElement("input");
   inputKey.type = "text";
   inputKey.classList.add("input-key");
-  // inputKey.onkeydown = (event) => {
-  //   //event.preventDefault();
-  //   updateMapping();
-  // };
-  inputKey.setAttribute("disabled", true);
-  // inputKey.addEventListener("focus", function () {
-  //   setInputInterval();
-  // });
-  // inputKey.addEventListener("blur", function () {
-  //   clearInterval(inputIntervalId);
-  //   inputIntervalId = null;
-  // });
+  inputKey.onkeydown = (event) => {
+    //event.preventDefault();
+    updateMapping();
+  };
+  // inputKey.setAttribute("disabled", true);
+  inputKey.addEventListener("focus", function () {
+    setInputInterval();
+  });
+  inputKey.addEventListener("blur", function () {
+    clearInterval(inputIntervalId);
+    inputIntervalId = null;
+  });
 
   // added by hasan - start
   const inputLabelValueWrapper = document.createElement("div");
   inputLabelValueWrapper.setAttribute("class", "label-value-pair");
   inputLabelValueWrapper.appendChild(inputKeyLabel);
   inputLabelValueWrapper.appendChild(inputKey);
-  newMapping.append(inputLabelValueWrapper);
+  keyAndMappingHolder.append(inputLabelValueWrapper);
   //                - end
 
   // newMapping.appendChild(inputKeyLabel);
@@ -445,26 +498,36 @@ function addNewMapping() {
   outputLabelValueWrapper.appendChild(outputKeyLabel);
   outputContainer.appendChild(outputKey);
   outputLabelValueWrapper.appendChild(outputContainer);
-  newMapping.appendChild(outputLabelValueWrapper);
+  keyAndMappingHolder.appendChild(outputLabelValueWrapper);
+
+  newMapping.appendChild(keyAndMappingHolder);
   //                -end
   // outputContainer.appendChild(outputKey);
   // newMapping.appendChild(outputContainer);
 
-  // let addFieldButton = document.createElement("button");
-  // addFieldButton.innerHTML = "+";
-  // addFieldButton.classList.add("add-field-button");
-  // newMapping.appendChild(addFieldButton);
+  const addDeleteButtonsWrapper = document.createElement("div");
+  addDeleteButtonsWrapper.setAttribute("class", "gapped-row");
+  addDeleteButtonsWrapper.setAttribute("style", "margin-bottom: 10px;");
 
-  // let deleteButton = document.createElement("button");
-  // deleteButton.innerHTML = "X";
-  // deleteButton.classList.add("delete-button");
-  // newMapping.appendChild(deleteButton);
+  let addFieldButton = document.createElement("button");
+  // addFieldButton.setAttribute("type", "button");
+  addFieldButton.innerHTML = "+";
+  addFieldButton.classList.add("add-field-button");
+  addDeleteButtonsWrapper.appendChild(addFieldButton);
 
+  let deleteButton = document.createElement("button");
+  deleteButton.innerHTML = "X";
+  deleteButton.classList.add("delete-button");
+  addDeleteButtonsWrapper.appendChild(deleteButton);
+
+  newMapping.appendChild(addDeleteButtonsWrapper);
   mappingDiv.appendChild(newMapping);
-  // addFieldButton.addEventListener("click", (event) => {
-  //   addOutputField(event.target.parentNode.querySelector(".output-container"));
-  // });
-  // deleteButton.addEventListener("click", deleteMapping);
+  addFieldButton.addEventListener("click", (event) => {
+    addOutputField(
+      event.target.parentNode.parentNode.querySelector(".output-container")
+    );
+  });
+  deleteButton.addEventListener("click", deleteMapping);
   return newMapping;
 }
 
@@ -544,6 +607,7 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
       deviceDetails = message.deviceDetails;
       // loadMapping();
       console.log(message.deviceDetails);
+      connectedDevices = message.connectedDevices;
       createMapping(message.connectedDevices);
     }
   }
