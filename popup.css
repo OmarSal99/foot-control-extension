@@ -32,7 +32,7 @@ button:disabled {
 
 body {
   height: fit-content;
-  min-width: 310px;
+  min-width: 400px;
   /* width: fit-content; */
   display: flex;
   flex-direction: column;
@@ -85,6 +85,7 @@ header {
 .output-key {
   width: 40px;
   padding: 2px;
+  height: fit-content;
 }
 
 .input-key-label {

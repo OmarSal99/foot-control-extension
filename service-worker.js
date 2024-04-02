@@ -1,6 +1,6 @@
 import { ACTIONS } from "./actions.js";
 import { DEVICES_LIST } from "./Drivers/devices-list.js";
-import devicesMappingsSupportedByAdmin from "./another-device-mappings.json" with { type: "json" };
+// import devicesMappingsSupportedByAdmin from "./another-device-mappings.json" with { type: "json" };
 
 /**
  * @typedef {Object} CharKeyCodePair
@@ -32,6 +32,7 @@ const DEVICE_DETAILS_SERVICE_WORKER_LOCAL_STORAGE =
 
 let popupTimer = undefined;
 let forwardInputToPopup = false;
+let devicesMappingsSupportedByAdmin = undefined;
 
 // to organize output order
 let sendingOutput = null;
@@ -107,7 +108,7 @@ function sendCommand(tabs, key) {
   return new Promise((resolve, reject) => {
     chrome.debugger.attach({ tabId: tabs[0].id }, "1.0", async function () {
       await new Promise((resolve, reject) => {
-        console.log(`Key typed is: ${key}`)
+        console.log(`Key typed is: ${key}`);
         chrome.debugger.sendCommand(
           { tabId: tabs[0].id },
           "Input.dispatchKeyEvent",
@@ -186,6 +187,8 @@ chrome.runtime.onMessage.addListener(async function (
       break;
 
     case ACTIONS.DEVICE_PERM_UPDATED:
+      devicesMappingsSupportedByAdmin =
+        message.devicesKeyMappingsSupportedByAdmin;
       connectDevice(message.productId, message.vendorId);
       break;
 
@@ -235,9 +238,9 @@ chrome.runtime.onMessage.addListener(async function (
       });
       break;
 
-      case ACTIONS.TEST_INPUT_SIMULATION:
-        handleKeyInput("Gamepad",1008, 21313, "f39/f39PAMA=");
-        break;
+    case ACTIONS.TEST_INPUT_SIMULATION:
+      handleKeyInput("Gamepad", 1008, 21313, "f39/f39PAMA=");
+      break;
 
     default:
       break;
@@ -381,8 +384,11 @@ async function connectDevice(productId, vendorId) {
   }
 
   let isDeviceSupportedByAdmin = false;
-  devicesMappingsSupportedByAdmin.forEach((device) => {
-    if (device.pid === productId && device.vid === vendorId) {
+  Object.keys(devicesMappingsSupportedByAdmin).forEach((device) => {
+    if (
+      parseInt(device.split("-")[2]) === productId &&
+      parseInt(device.split("-")[1]) === vendorId
+    ) {
       isDeviceSupportedByAdmin = true;
     }
   });

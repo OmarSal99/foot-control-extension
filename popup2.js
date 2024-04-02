@@ -8,6 +8,8 @@ import devicesMappings from "./another-device-mappings.json" with { type: "json"
 
 let connectedDevices = [];
 
+let allsupportedDevicesKeyMappings = undefined;
+
 document.addEventListener("DOMContentLoaded", function () {
   let device = undefined;
   loadMappings2();
@@ -25,6 +27,7 @@ document.addEventListener("DOMContentLoaded", function () {
         console.log(device)
         chrome.runtime.sendMessage({
           action: ACTIONS.DEVICE_PERM_UPDATED,
+          devicesKeyMappingsSupportedByAdmin: allsupportedDevicesKeyMappings,
           productId: devices[0]?.productId,
           vendorId: devices[0]?.vendorId,
         });
@@ -245,7 +248,7 @@ function loadMappings2() {
     }
   });
   console.log(supportedDevices);
-  const allsupportedDevicesKeyMappings = {};
+  allsupportedDevicesKeyMappings = {};
 
   for (const device of supportedDevices) {
     const mappings = {};
