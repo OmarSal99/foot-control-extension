@@ -1,6 +1,7 @@
 const LOCAL_STORAGE_KEY_MAPPING = "foot pedal key mapping";
 const LOCAL_STORAGE_ORDER_LIST = "foot pedal order list";
 const LOCAL_STORAGE_ALL_DEVICES_KEY_MAPPINGS = "all devices key mappings";
+const LOCAL_STORAGE_USER_EDITED_DEVICES_KEY_MAPPINGS = "devices key mappings set by the user";
 
 import { DEVICES_LIST } from "./Drivers/devices-list.js";
 import { ACTIONS } from "./actions.js";
@@ -85,7 +86,7 @@ function showMappings() {
     localStorage.getItem(LOCAL_STORAGE_ALL_DEVICES_KEY_MAPPINGS)
   );
   const userDefinedDevicesKeysMappings = JSON.parse(
-    localStorage.getItem("USER_EDITED_DEVICES_KEY_MAPPINGS")
+    localStorage.getItem(LOCAL_STORAGE_USER_EDITED_DEVICES_KEY_MAPPINGS)
   );
   if(userDefinedDevicesKeysMappings){
     allsupportedDevicesKeyMappings = userDefinedDevicesKeysMappings;
@@ -338,7 +339,7 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
         const allsupportedDevicesKeyMappings = JSON.parse(
           localStorage.getItem(LOCAL_STORAGE_ALL_DEVICES_KEY_MAPPINGS)
         );
-        const userDefinedDeviceMappings = JSON.parse(localStorage.getItem("USER_EDITED_DEVICES_KEY_MAPPINGS"));
+        const userDefinedDeviceMappings = JSON.parse(localStorage.getItem(LOCAL_STORAGE_USER_EDITED_DEVICES_KEY_MAPPINGS));
         chrome.runtime.sendMessage({
           action: ACTIONS.UPDATE_KEY_MAPPING,
           keyMapping: userDefinedDeviceMappings ? userDefinedDeviceMappings : allsupportedDevicesKeyMappings,

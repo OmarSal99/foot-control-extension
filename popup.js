@@ -180,7 +180,7 @@ function createMapping(connectedDevices) {
     );
 
     const userDefinedDevicesMappings = JSON.parse(
-      localStorage.getItem("USER_EDITED_DEVICES_KEY_MAPPINGS")
+      localStorage.getItem(LOCAL_STORAGE_USER_EDITED_DEVICES_KEY_MAPPINGS)
     );
     if (userDefinedDevicesMappings) {
       allsupportedDevicesKeyMappings = userDefinedDevicesMappings;
@@ -280,7 +280,7 @@ function updateMapping() {
   }
 
   localStorage.setItem(
-    "USER_EDITED_DEVICES_KEY_MAPPINGS",
+    LOCAL_STORAGE_USER_EDITED_DEVICES_KEY_MAPPINGS,
     JSON.stringify(allsupportedDevicesKeyMappings)
   );
   chrome.runtime.sendMessage({
