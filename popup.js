@@ -450,11 +450,11 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   console.log(message);
   if (message.action === ACTIONS.INPUT_KEY_PRESSED) {
     //background send msg that a key pressed (on the device) only if the user is inside input field
-    // let focusedInput = document.activeElement;
-    // if (focusedInput.classList.contains("input-key")) {
-    //   focusedInput.value = message.key;
-    //   updateMapping();
-    // }
+    let focusedInput = document.activeElement;
+    if (focusedInput.classList.contains("input-key")) {
+      focusedInput.value = message.key;
+      updateMapping();
+    }
     console.log("Input key press deactivated");
   } else if (message.action === ACTIONS.DEVICE_CHANGED) {
     //background will send a msg containing the current device name if it changed or after a device name request

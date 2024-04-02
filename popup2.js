@@ -4,7 +4,7 @@ const LOCAL_STORAGE_ALL_DEVICES_KEY_MAPPINGS = "all devices key mappings";
 
 import { DEVICES_LIST } from "./Drivers/devices-list.js";
 import { ACTIONS } from "./actions.js";
-import devicesMappings from "./another-device-mappings.json" with { type: "json" };
+import devicesMappings from "./another-device-mappings.json" assert { type: "json" };
 
 let connectedDevices = [];
 
