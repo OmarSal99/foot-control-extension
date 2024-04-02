@@ -5,6 +5,8 @@ import devicesMappings from "./devices-mappings.json" assert { type: "json" };
 const LOCAL_STORAGE_KEY_MAPPING = "foot pedal key mapping";
 const LOCAL_STORAGE_ORDER_LIST = "foot pedal order list";
 const LOCAL_STORAGE_ALL_DEVICES_KEY_MAPPINGS = "all devices key mappings";
+const LOCAL_STORAGE_USER_EDITED_DEVICES_KEY_MAPPINGS =
+  "devices key mappings set by the user";
 
 //dictionary that actually store the mapping, key: []
 //the key (string) is the input and the array contains a list of the ouputs
