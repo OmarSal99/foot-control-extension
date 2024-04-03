@@ -1,12 +1,14 @@
-const LOCAL_STORAGE_KEY_MAPPING = "foot pedal key mapping";
-const LOCAL_STORAGE_ORDER_LIST = "foot pedal order list";
 const LOCAL_STORAGE_ALL_DEVICES_KEY_MAPPINGS = "all devices key mappings";
-const LOCAL_STORAGE_USER_EDITED_DEVICES_KEY_MAPPINGS = "devices key mappings set by the user";
+const LOCAL_STORAGE_USER_EDITED_DEVICES_KEY_MAPPINGS =
+  "devices key mappings set by the user";
 
 import { DEVICES_LIST } from "./Drivers/devices-list.js";
 import { ACTIONS } from "./actions.js";
 import devicesMappings from "./another-device-mappings.json" assert { type: "json" };
 
+/**
+ * @type Array<{deviceName: string, vendorId: number, productId: number}>
+ */
 let connectedDevices = [];
 
 let allsupportedDevicesKeyMappings = undefined;
@@ -25,7 +27,10 @@ document.addEventListener("DOMContentLoaded", function () {
           return;
         }
         device = devices[0];
-        console.log(device)
+        console.log(device);
+        // To inform the service worker that the device of the pid and vid
+        // specified within the message has been granted permission in order
+        // to connect to it
         chrome.runtime.sendMessage({
           action: ACTIONS.DEVICE_PERM_UPDATED,
           devicesKeyMappingsSupportedByAdmin: allsupportedDevicesKeyMappings,
@@ -81,18 +86,16 @@ window.addEventListener("load", async () => {
 //this function load all mapping for all device from local storage and show them
 //the local storage is teh same as popup so it just read from it and rely on popup to make any updates on it
 function showMappings() {
-  let devices = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_MAPPING));
   let allsupportedDevicesKeyMappings = JSON.parse(
     localStorage.getItem(LOCAL_STORAGE_ALL_DEVICES_KEY_MAPPINGS)
   );
   const userDefinedDevicesKeysMappings = JSON.parse(
     localStorage.getItem(LOCAL_STORAGE_USER_EDITED_DEVICES_KEY_MAPPINGS)
   );
-  if(userDefinedDevicesKeysMappings){
+  if (userDefinedDevicesKeysMappings) {
     allsupportedDevicesKeyMappings = userDefinedDevicesKeysMappings;
   }
   console.log(userDefinedDevicesKeysMappings);
-  console.log("devices are", devices);
   let devicesSpace = document.getElementById("devices-space");
 
   while (devicesSpace.firstChild) {
@@ -109,7 +112,6 @@ function showMappings() {
         vendorId: arrayedDeviceDetails[1],
         productId: arrayedDeviceDetails[2],
       };
-      console.log(name);
       let mappingDiv = document.createElement("div");
       mappingDiv.classList.add("mapping-div");
       mappingDiv.setAttribute("id", someDeviceKeyMappingsKey);
@@ -155,7 +157,6 @@ function showMappings() {
           .length;
         i++
       ) {
-        // for(const deviceInputKey of Object.keys())
         let keyMapping = document.createElement("div");
         keyMapping.classList.add("key-mapping");
 
@@ -168,20 +169,16 @@ function showMappings() {
         inputElement.type = "text";
         inputElement.classList.add("input-key");
         inputElement.disabled = true;
-        let deviceInputKeyToShow = undefined;
-        Object.keys(
+        let deviceInputKeyToShow = Object.keys(
           allsupportedDevicesKeyMappings[someDeviceKeyMappingsKey]
-        ).forEach((deviceInputKey) => {
-          if (
+        ).filter(
+          (deviceInputKey) =>
             allsupportedDevicesKeyMappings[someDeviceKeyMappingsKey][
               deviceInputKey
             ].order ==
             i + 1
-          ) {
-            deviceInputKeyToShow = deviceInputKey;
-            inputElement.value = deviceInputKey;
-          }
-        });
+        )[0];
+        inputElement.value = deviceInputKeyToShow;
         keyMapping.appendChild(inputElement);
 
         let outputKeyLabel = document.createElement("label");
@@ -191,7 +188,8 @@ function showMappings() {
 
         let outputContainer = document.createElement("div");
         outputContainer.classList.add("output-container");
-        console.log(deviceInputKeyToShow)
+        console.log(allsupportedDevicesKeyMappings[someDeviceKeyMappingsKey]);
+        console.log(deviceInputKeyToShow);
         for (
           let j = 0;
           j <
@@ -233,7 +231,6 @@ function disconnectDevice(device) {
 
 function loadMappings2() {
   const supportedDevices = [];
-  const devicesDetails = {};
   // to find what devices are supported are also listed in the JSON config file
   DEVICES_LIST.forEach((device) => {
     const filterResult = devicesMappings.filter((deviceMapping) => {
@@ -253,15 +250,12 @@ function loadMappings2() {
 
   for (const device of supportedDevices) {
     const mappings = {};
-    const deviceEntries = [];
-    devicesDetails[device.deviceName] = { vid: device.vid, pid: device.pid };
     allsupportedDevicesKeyMappings[
       `${device.deviceName}-${device.vid}-${device.pid}`
     ] = {};
 
     for (const [index, value] of Object.keys(device.keyMappings).entries()) {
       const key = value;
-      deviceEntries.push(key);
       mappings[key] = device.keyMappings[key].outputKeys.map((char) => ({
         key: char,
         keycode: char.charCodeAt(0),
@@ -274,41 +268,10 @@ function loadMappings2() {
         order: index + 1,
       };
     }
-    console.log(allsupportedDevicesKeyMappings);
-    localStorage.setItem(
-      LOCAL_STORAGE_ORDER_LIST +
-        "-" +
-        device.deviceName +
-        "-" +
-        device.vid +
-        "-" +
-        device.pid,
-      JSON.stringify(deviceEntries)
-    );
-    console.log(deviceEntries);
-    localStorage.setItem(
-      LOCAL_STORAGE_KEY_MAPPING +
-        "-" +
-        device.deviceName +
-        "-" +
-        device.vid +
-        "-" +
-        device.pid,
-      JSON.stringify(mappings)
-    );
-    console.log(mappings);
-    localStorage.setItem(
-      LOCAL_STORAGE_KEY_MAPPING,
-      JSON.stringify(devicesDetails)
-    );
     localStorage.setItem(
       LOCAL_STORAGE_ALL_DEVICES_KEY_MAPPINGS,
       JSON.stringify(allsupportedDevicesKeyMappings)
     );
-    console.log(devicesDetails);
-    // console.log(mappings);
-    // console.log(deviceEntries);
-    // console.log(device);
   }
 }
 
@@ -318,32 +281,20 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   if (message.action === ACTIONS.UPDATE_KEY_MAPPING) {
     showMappings();
   } else if (message.action === ACTIONS.DEVICE_CHANGED) {
-    if (
-      message.deviceName &&
-      message.deviceDetails &&
-      message.connectedDevices?.length > 0
-    ) {
-      let storedObjectString = localStorage.getItem(
-        LOCAL_STORAGE_KEY_MAPPING +
-          "-" +
-          message.deviceName +
-          "-" +
-          message.deviceDetails.vid +
-          "-" +
-          message.deviceDetails.pid
-      );
-
-      if (storedObjectString !== null && !message?.responseForGetDeviceName) {
-        const keyMapping = JSON.parse(storedObjectString);
+    if (message.connectedDevices?.length > 0) {
+      if (!message?.responseForGetDeviceName) {
         console.log(message.connectedDevices);
         const allsupportedDevicesKeyMappings = JSON.parse(
           localStorage.getItem(LOCAL_STORAGE_ALL_DEVICES_KEY_MAPPINGS)
         );
-        const userDefinedDeviceMappings = JSON.parse(localStorage.getItem(LOCAL_STORAGE_USER_EDITED_DEVICES_KEY_MAPPINGS));
+        const userDefinedDeviceMappings = JSON.parse(
+          localStorage.getItem(LOCAL_STORAGE_USER_EDITED_DEVICES_KEY_MAPPINGS)
+        );
         chrome.runtime.sendMessage({
           action: ACTIONS.UPDATE_KEY_MAPPING,
-          keyMapping: userDefinedDeviceMappings ? userDefinedDeviceMappings : allsupportedDevicesKeyMappings,
-          deviceName: message.deviceName,
+          keyMapping: userDefinedDeviceMappings
+            ? userDefinedDeviceMappings
+            : allsupportedDevicesKeyMappings,
         });
       }
       let connectedDevicesNames = "";

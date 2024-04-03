@@ -68,10 +68,7 @@ navigator.hid.addEventListener("disconnect", ({ device }) => {
     connectedDevices.filter((device) => device.vendorId != deviceDetails);
     chrome.runtime.sendMessage({
       action: ACTIONS.DEVICE_CHANGED,
-      deviceName: deviceName,
-      deviceDetails: deviceDetails,
       connectedDevices: connectedDevices,
-      x: "hi",
     });
     chrome.notifications.create("", {
       title: `${disconnectedDevice.deviceName} disconnected`,
@@ -80,29 +77,9 @@ navigator.hid.addEventListener("disconnect", ({ device }) => {
       iconUrl: "./extension-logo.png",
     });
   }
-  // if (
-  //   device?.productId === deviceDetails?.pid &&
-  //   device?.vendorId === deviceDetails?.vid
-  // ) {
-  //   chrome.notifications.create("", {
-  //     title: `${deviceName} disconnected`,
-  //     message: `${deviceName} device with VID: ${deviceDetails.vid} and PID: ${deviceDetails.pid} has been disconnected.`,
-  //     type: "basic",
-  //     iconUrl: "./extension-logo.png",
-  //   });
-
-  //   deviceName = undefined;
-  //   deviceDetails = undefined;
-  //   chrome.runtime.sendMessage({
-  //     action: ACTIONS.DEVICE_CHANGED,
-  //     deviceName: deviceName,
-  //     deviceDetails: deviceDetails,
-  //     x: "hi",
-  //   });
-  // }
 });
 
-let isFirstTime = true;
+// let isFirstTime = true;
 // send command and return a promise, the promise is resolved when sending command is done to do clean up
 function sendCommand(tabs, key) {
   return new Promise((resolve, reject) => {
@@ -169,11 +146,11 @@ chrome.runtime.onMessage.addListener(async function (
   switch (message.action) {
     case ACTIONS.UPDATE_KEY_MAPPING:
       console.log("service worker received msg to update the mappings");
-      if (message.deviceName === deviceName) {
-        keyMapping = message.keyMapping;
-        console.log("keyMapping is: ");
-        console.log(keyMapping);
-      }
+      // if (message.deviceName === deviceName) {
+      keyMapping = message.keyMapping;
+      console.log("keyMapping is: ");
+      console.log(keyMapping);
+      // }
       let storageObject = {};
       storageObject[
         KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE + "-" + message.deviceName
@@ -206,8 +183,6 @@ chrome.runtime.onMessage.addListener(async function (
       console.log(connectedDevices);
       chrome.runtime.sendMessage({
         action: ACTIONS.DEVICE_CHANGED,
-        deviceName: deviceName,
-        deviceDetails: deviceDetails,
         responseForGetDeviceName: true,
         connectedDevices: connectedDevices,
       });
@@ -231,8 +206,6 @@ chrome.runtime.onMessage.addListener(async function (
       );
       chrome.runtime.sendMessage({
         action: ACTIONS.DEVICE_CHANGED,
-        deviceName: deviceName,
-        deviceDetails: deviceDetails,
         responseForGetDeviceName: true,
         connectedDevices: connectedDevices,
       });
@@ -419,22 +392,6 @@ async function connectDevice(productId, vendorId) {
     return;
   }
   console.log(`PID is: ${productId}, VID is: ${vendorId}`);
-  // deviceDetails = { pid: productId, vid: vendorId };
-  // chrome.runtime.sendMessage({
-  //   action: ACTIONS.DEVICE_CHANGED,
-  //   deviceName: deviceName,
-  //   deviceDetails: deviceDetails,
-  //   x: "hi",
-  // });
-  // console.log("sent device details");
-  // //store the details of the last connected device
-  // let storageObject = {};
-  // storageObject[DEVICE_DETAILS_SERVICE_WORKER_LOCAL_STORAGE] = {
-  //   deviceName: deviceName,
-  //   productId: productId,
-  //   vendorId: vendorId,
-  // };
-  // chrome.storage.local.set(storageObject, function () {});
 
   try {
     await device.driver.open();
@@ -468,8 +425,6 @@ async function connectDevice(productId, vendorId) {
   // Send msg for popups to update the mapping to the new device name
   chrome.runtime.sendMessage({
     action: ACTIONS.DEVICE_CHANGED,
-    deviceName: deviceName,
-    deviceDetails: deviceDetails,
     connectedDevices: connectedDevices,
     x: "hi",
   });
@@ -483,16 +438,6 @@ async function connectDevice(productId, vendorId) {
     vendorId: vendorId,
   };
   chrome.storage.local.set(storageObject, function () {});
-
-  //load the new keymapping from the local storage
-  // let storageKey = KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE + "-" + device.name;
-  // await new Promise((resolve, reject) => {
-  //   chrome.storage.local.get(storageKey, function (result) {
-  //     if (result[storageKey] === undefined) keyMapping = {};
-  //     else keyMapping = result[storageKey];
-  //     resolve();
-  //   });
-  // });
 }
 
 function startPopupTimer() {

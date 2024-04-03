@@ -1,192 +1,54 @@
-import { DEVICES_LIST } from "./Drivers/devices-list.js";
 import { ACTIONS } from "./actions.js";
-import devicesMappings from "./devices-mappings.json" assert { type: "json" };
-
-const LOCAL_STORAGE_KEY_MAPPING = "foot pedal key mapping";
-const LOCAL_STORAGE_ORDER_LIST = "foot pedal order list";
 const LOCAL_STORAGE_ALL_DEVICES_KEY_MAPPINGS = "all devices key mappings";
 const LOCAL_STORAGE_USER_EDITED_DEVICES_KEY_MAPPINGS =
   "devices key mappings set by the user";
 
-//dictionary that actually store the mapping, key: []
-//the key (string) is the input and the array contains a list of the ouputs
-let keyMapping = {};
-//a list to store the order of keys from keymapping that apear in the ui
-let orderList = [];
+/**
+ * @typedef {Object.<string, DeviceKeysMappings>} DevicesKeysMappings Holds all
+ *     devices keymappings. The object's key form is: deviceName-vid-pid.
+ */
 
+/**
+ * @typedef {Object.<string, MappingInfo} DeviceKeysMappings Holds the device
+ *     keys with their corresponding mappings and order to be shown
+ */
+
+/**
+ * @typedef {Object} MappingInfo
+ * @property {number} order Holds the order this key mapping had been added
+ * @property {Array<{key: string, keycode: number}>} outputKeys Hold the key to
+ *     be shown when the corresponding device key is pressed
+ */
+
+/**
+ * @type {DevicesKeysMappings}
+ */
 let allsupportedDevicesKeyMappings = {};
 
+/**
+ * @type Array<{deviceName: string, vendorId: number, productId: number}>
+ */
 let connectedDevices = [];
 
-//the current device name that the keymapping is for
-let deviceName = undefined;
-// The current device details pid and vid
-let deviceDetails = undefined;
 //store inputinterval id which will be used to clear it when it's done
 //the interval sends msgs to background rapidly to inform it that the user is in the input field so it pass the input from the device to the popup
 let inputIntervalId = null;
 
-// function loadMappings2() {
-//   const supportedDevices = [];
-//   const devicesDetails = {};
-//   DEVICES_LIST.forEach((device) => {
-//     const filterResult = devicesMappings.filter((deviceMapping) => {
-//       return (
-//         device.driver.vendorId === deviceMapping.vid &&
-//         device.driver.productId === deviceMapping.pid
-//       );
-//     })[0];
-
-//     if (filterResult) {
-//       filterResult["deviceName"] = device.name;
-//       supportedDevices.push(filterResult);
-//     }
-//   });
-//   console.log(supportedDevices);
-
-//   for (const device of supportedDevices) {
-//     const mappings = {};
-//     const deviceEntries = [];
-//     devicesDetails[device.deviceName] = { vid: device.vid, pid: device.pid };
-
-//     for (const key of Object.keys(device.keyMappings)) {
-//       deviceEntries.push(key);
-//       mappings[key] = device.keyMappings[key].map((char) => ({
-//         key: char,
-//         keycode: char.charCodeAt(0),
-//       }));
-//     }
-//     localStorage.setItem(
-//       LOCAL_STORAGE_ORDER_LIST +
-//         "-" +
-//         device.deviceName +
-//         "-" +
-//         device.vid +
-//         "-" +
-//         device.pid,
-//       JSON.stringify(deviceEntries)
-//     );
-//     localStorage.setItem(
-//       LOCAL_STORAGE_KEY_MAPPING +
-//         "-" +
-//         device.deviceName +
-//         "-" +
-//         device.vid +
-//         "-" +
-//         device.pid,
-//       JSON.stringify(mappings)
-//     );
-//     localStorage.setItem(
-//       LOCAL_STORAGE_KEY_MAPPING,
-//       JSON.stringify(devicesDetails)
-//     );
-//     console.log(mappings);
-//     console.log(deviceEntries);
-//     console.log(device);
-//   }
-// }
-
-function loadMapping() {
-  console.log("went into loadMapping");
-  console.log(deviceName);
-  console.log(deviceDetails);
-  if (deviceName !== undefined && deviceDetails !== undefined) {
-    console.log("And into the if of loadMapping");
-    const connectedDevice = devicesMappings.filter(
-      (device) =>
-        device.pid == deviceDetails.pid && device.vid == deviceDetails.vid
-    )[0];
-    const deviceEntries = [];
-    const mappings = {};
-    console.log(connectedDevice);
-    if (connectedDevice) {
-      for (const key of Object.keys(connectedDevice.keyMappings)) {
-        deviceEntries.push(key);
-        mappings[key] = connectedDevice.keyMappings[key].map((char) => ({
-          key: char,
-          keycode: char.charCodeAt(0),
-        }));
-      }
-      localStorage.setItem(
-        LOCAL_STORAGE_ORDER_LIST +
-          "-" +
-          deviceName +
-          "-" +
-          deviceDetails.vid +
-          "-" +
-          deviceDetails.pid,
-        JSON.stringify(deviceEntries)
-      );
-      localStorage.setItem(
-        LOCAL_STORAGE_KEY_MAPPING +
-          "-" +
-          deviceName +
-          "-" +
-          deviceDetails.vid +
-          "-" +
-          deviceDetails.pid,
-        JSON.stringify(mappings)
-      );
-
-      let devices = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY_MAPPING));
-      if (devices === null && Object.keys(keyMapping).length !== 0) {
-        devices = {};
-        // devices[deviceName] = true;
-        devices[deviceName] = {
-          vid: deviceDetails.vid,
-          pid: deviceDetails.pid,
-        };
-        localStorage.setItem(
-          LOCAL_STORAGE_KEY_MAPPING,
-          JSON.stringify(devices)
-        );
-      } else if (
-        devices[deviceName] === undefined &&
-        Object.keys(keyMapping).length !== 0
-      ) {
-        // devices[deviceName] = true;
-        devices[deviceName] = {
-          vid: deviceDetails.vid,
-          pid: deviceDetails.pid,
-        };
-        localStorage.setItem(
-          LOCAL_STORAGE_KEY_MAPPING,
-          JSON.stringify(devices)
-        );
-      }
-      // I Hasan think this doesn't have real effect.
-      // else if (
-      //   devices[deviceName] !== undefined &&
-      //   Object.keys(keyMapping).length === 0
-      // ) {
-      //   delete devices[deviceName];
-      //   localStorage.setItem(
-      //     LOCAL_STORAGE_KEY_MAPPING,
-      //     JSON.stringify(devices)
-      //   );
-      // }
-
-      // createMapping();
-    }
-  }
-}
-
 //initial function that will run when the device changes (or when open the popup for the first time)
 //it load the stored data for that device name to the ui and update keymapping
 function createMapping(connectedDevices) {
-  if (connectedDevices) {
+  if (connectedDevices.length > 0) {
     allsupportedDevicesKeyMappings = JSON.parse(
       localStorage.getItem(LOCAL_STORAGE_ALL_DEVICES_KEY_MAPPINGS)
     );
-
     const userDefinedDevicesMappings = JSON.parse(
       localStorage.getItem(LOCAL_STORAGE_USER_EDITED_DEVICES_KEY_MAPPINGS)
     );
+
     if (userDefinedDevicesMappings) {
       allsupportedDevicesKeyMappings = userDefinedDevicesMappings;
     }
 
-    allsupportedDevicesKeyMappings;
     if (allsupportedDevicesKeyMappings) {
       const devicesMappingsSpaceElement =
         document.getElementById("devices-mappings");
@@ -253,19 +115,23 @@ function createMapping(connectedDevices) {
 //this run every time user change something in the ui, it distroy the old keymapping and rebuild it based on the ui
 //a msg indicate that the mapping update is sent with the new mapping
 function updateMapping() {
-  console.log(allsupportedDevicesKeyMappings);
   for (const connectedDevice of connectedDevices) {
     const someDeviceKeyMappings = {};
     const device = `${connectedDevice.deviceName}-${connectedDevice.vendorId}-${connectedDevice.productId}`;
-    console.log(device);
     const deviceMappingsHolderElement = document.getElementById(device);
-    console.log(deviceMappingsHolderElement);
     const keyMappingList =
       deviceMappingsHolderElement.querySelectorAll(".key-mapping");
+    const inputKeys = [];
     Array.from(keyMappingList).forEach((parentDiv, index) => {
       let inputKey = parentDiv.querySelector(".input-key").value;
+
+      if (inputKey === "" || inputKeys.includes(inputKey)) {
+        parentDiv.querySelector(".input-key").value = "";
+        parentDiv.remove();
+        return;
+      }
+      inputKeys.push(inputKey);
       let outputFields = parentDiv.querySelectorAll(".output-key");
-      if (inputKey === "") return;
       someDeviceKeyMappings[inputKey] = { outputKeys: [], order: index + 1 };
       for (let i = 0; i < outputFields.length; i++) {
         if (outputFields[i].value !== "") {
@@ -286,9 +152,7 @@ function updateMapping() {
   chrome.runtime.sendMessage({
     action: ACTIONS.UPDATE_KEY_MAPPING,
     keyMapping: allsupportedDevicesKeyMappings,
-    deviceName: deviceName,
   });
-  console.log(keyMapping);
 }
 
 // delete a key mapping (row)
@@ -300,7 +164,6 @@ function deleteMapping(event) {
 
 //create output field and place it inside this
 function addOutputField(parentDiv) {
-  let fields = parentDiv.getElementsByClassName("output-key");
   let outputField = createOutputField();
   parentDiv.appendChild(outputField);
   return outputField;
@@ -351,7 +214,7 @@ function addNewMapping() {
   const inputKey = document.createElement("input");
   inputKey.type = "text";
   inputKey.classList.add("input-key");
-  inputKey.onkeydown = (event) => {
+  inputKey.onkeyup = (event) => {
     updateMapping();
   };
   inputKey.addEventListener("focus", function () {
@@ -437,9 +300,9 @@ window.addEventListener("load", async () => {
   document
     .getElementById("connect-device-button")
     .addEventListener("click", connectDevice);
-  console.log(deviceDetails);
   getDeviceName();
 });
+
 async function getDeviceName() {
   chrome.runtime.sendMessage({
     action: ACTIONS.GET_DEVICE_NAME,
@@ -459,24 +322,12 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
     }
     console.log("Input key press deactivated");
   } else if (message.action === ACTIONS.DEVICE_CHANGED) {
-    //background will send a msg containing the current device name if it changed or after a device name request
-    deviceName = message.deviceName;
-    console.log("device name is", deviceName);
-    if (deviceName === undefined || message.connectedDevices?.length <= 0) {
+    if (message.connectedDevices?.length <= 0) {
       console.log("from popup action DEVICE_CHANGED, device name undefined");
-      // document.getElementById("add-button").disabled = true;
       document.getElementById("device-name").innerHTML = "No device connected.";
-      // document.getElementById("mapping-space").innerHTML = "";
       return;
-    }
-    // document.getElementById("add-button").disabled = false;
-    console.log(message.deviceDetails);
-
-    if (message?.deviceDetails) {
+    } else {
       document.getElementById("device-name").innerHTML = `Connected devices:`;
-      deviceDetails = message.deviceDetails;
-      // loadMapping();
-      console.log(message.deviceDetails);
       connectedDevices = message.connectedDevices;
       createMapping(message.connectedDevices);
     }
