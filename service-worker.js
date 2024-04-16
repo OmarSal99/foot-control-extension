@@ -1,7 +1,5 @@
 import { ACTIONS } from "./actions.js";
 import { DEVICES_LIST } from "./Drivers/devices-list.js";
-// import devicesMappingsSupportedByAdmin from "./another-device-mappings.json" with { type: "json" };
-
 /**
  * @typedef {Object} CharKeyCodePair
  * @property {string} key Single character string representing the key.
@@ -32,6 +30,27 @@ const DEVICE_DETAILS_SERVICE_WORKER_LOCAL_STORAGE =
 
 let popupTimer = undefined;
 let forwardInputToPopup = false;
+
+/**
+ * @typedef {Object.<string, DeviceKeysMappings>} DevicesKeysMappings Holds all
+ *     devices keymappings. The object's key form is: deviceName-vid-pid.
+ */
+
+/**
+ * @typedef {Object.<string, MappingInfo} DeviceKeysMappings Holds the device
+ *     keys with their corresponding mappings and order to be shown
+ */
+
+/**
+ * @typedef {Object} MappingInfo
+ * @property {number} order Holds the order this key mapping had been added
+ * @property {Array<{key: string, keycode: number}>} outputKeys Hold the key to
+ *     be shown when the corresponding device key is pressed
+ */
+
+/**
+ * @type {DevicesKeysMappings}
+ */
 let devicesMappingsSupportedByAdmin = undefined;
 
 // to organize output order

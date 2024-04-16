@@ -11,6 +11,26 @@ import devicesMappings from "./another-device-mappings.json" assert { type: "jso
  */
 let connectedDevices = [];
 
+/**
+ * @typedef {Object.<string, DeviceKeysMappings>} DevicesKeysMappings Holds all
+ *     devices keymappings. The object's key form is: deviceName-vid-pid.
+ */
+
+/**
+ * @typedef {Object.<string, MappingInfo} DeviceKeysMappings Holds the device
+ *     keys with their corresponding mappings and order to be shown
+ */
+
+/**
+ * @typedef {Object} MappingInfo
+ * @property {number} order Holds the order this key mapping had been added
+ * @property {Array<{key: string, keycode: number}>} outputKeys Hold the key to
+ *     be shown when the corresponding device key is pressed
+ */
+
+/**
+ * @type {DevicesKeysMappings}
+ */
 let allsupportedDevicesKeyMappings = undefined;
 
 document.addEventListener("DOMContentLoaded", function () {
@@ -89,9 +109,13 @@ function showMappings() {
   let allsupportedDevicesKeyMappings = JSON.parse(
     localStorage.getItem(LOCAL_STORAGE_ALL_DEVICES_KEY_MAPPINGS)
   );
+  /**
+   * @type {DevicesKeysMappings}
+   */
   const userDefinedDevicesKeysMappings = JSON.parse(
     localStorage.getItem(LOCAL_STORAGE_USER_EDITED_DEVICES_KEY_MAPPINGS)
   );
+
   if (userDefinedDevicesKeysMappings) {
     allsupportedDevicesKeyMappings = userDefinedDevicesKeysMappings;
   }
