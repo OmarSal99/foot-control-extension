@@ -13,4 +13,8 @@ export const ACTIONS = {
   DEVICE_INPUT_MODE_CHANGED: "device input entry mode",
   DISCONNECT_DEVICE: "disconnect the device passed with the message",
   TEST_INPUT_SIMULATION: "Simulate input (TEST)",
+  REQUEST_CONNECTED_DEVICES_WITH_MAPPINGS:
+    "request devices connected with all supported devices mappings",
+  BROADCAST_CONNECTED_DEVICES_WITH_MAPPINGS_RESPONSE:
+    "receive devices connected with all supported devices mappings",
 };

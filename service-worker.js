@@ -84,9 +84,13 @@ navigator.hid.addEventListener("disconnect", ({ device }) => {
       connectedDevice.vendorId == device?.vendorId
   );
   if (disconnectedDevice) {
-    connectedDevices.filter((device) => device.vendorId != deviceDetails);
+    connectedDevices = connectedDevices.filter(
+      (device) =>
+        device.vendorId != deviceDetails.vid &&
+        device.productId != deviceDetails.pid
+    );
     chrome.runtime.sendMessage({
-      action: ACTIONS.DEVICE_CHANGED,
+      action: ACTIONS.BROADCAST_CONNECTED_DEVICES_WITH_MAPPINGS_RESPONSE,
       connectedDevices: connectedDevices,
     });
     chrome.notifications.create("", {
@@ -198,11 +202,10 @@ chrome.runtime.onMessage.addListener(async function (
       console.log(deviceInputMode);
       break;
 
-    case ACTIONS.GET_DEVICE_NAME:
+    case ACTIONS.REQUEST_CONNECTED_DEVICES_WITH_MAPPINGS:
       console.log(connectedDevices);
       chrome.runtime.sendMessage({
-        action: ACTIONS.DEVICE_CHANGED,
-        responseForGetDeviceName: true,
+        action: ACTIONS.BROADCAST_CONNECTED_DEVICES_WITH_MAPPINGS_RESPONSE,
         connectedDevices: connectedDevices,
       });
       break;
@@ -224,8 +227,7 @@ chrome.runtime.onMessage.addListener(async function (
           connectedDevice.vendorId != vendorId
       );
       chrome.runtime.sendMessage({
-        action: ACTIONS.DEVICE_CHANGED,
-        responseForGetDeviceName: true,
+        action: ACTIONS.BROADCAST_CONNECTED_DEVICES_WITH_MAPPINGS_RESPONSE,
         connectedDevices: connectedDevices,
       });
       break;
@@ -354,63 +356,25 @@ const handleKeyInput = async (deviceName, vendorId, productId, key) => {
   return;
 };
 
+/**
+ * Responsible for connecting the device after checking if it's supported
+ *     by the extension and the admin policy.
+ *
+ * @param {number} productId
+ * @param {number} vendorId
+ */
 async function connectDevice(productId, vendorId) {
+  if (!isDevicePermittedToConnect(productId, vendorId)) {
+    return;
+  }
   let device = undefined;
-  // Make sure that the selected device by the user is supported
+  // Make sure that the selected device by the user is supported by extension
   for (let i = 0; i < DEVICES_LIST.length; i++) {
     if (DEVICES_LIST[i].driver.filter(productId, vendorId)) {
       device = DEVICES_LIST[i];
       break;
     }
   }
-
-  if (device === undefined) {
-    chrome.notifications.create("", {
-      title: "Connection Failure",
-      message: "Device not supported.",
-      type: "basic",
-      iconUrl: "./extension-logo.png",
-    });
-    console.log("unable to find device in the devices-list");
-    return;
-  }
-
-  let isDeviceSupportedByAdmin = false;
-  Object.keys(devicesMappingsSupportedByAdmin).forEach((device) => {
-    if (
-      parseInt(device.split("-")[2]) === productId &&
-      parseInt(device.split("-")[1]) === vendorId
-    ) {
-      isDeviceSupportedByAdmin = true;
-    }
-  });
-  if (!isDeviceSupportedByAdmin) {
-    chrome.notifications.create("", {
-      title: "Connection Failure",
-      message:
-        "Device not supported by admin.\nContact your admin to grant support.",
-      type: "basic",
-      iconUrl: "./extension-logo.png",
-    });
-    console.log("unable to find device in the devices-list");
-    return;
-  }
-
-  if (
-    connectedDevices.some(
-      (device) => device.productId === productId && device.vendorId === vendorId
-    )
-  ) {
-    chrome.notifications.create("", {
-      title: "Already connected",
-      message: "Device you're trying to connect to is already connected.",
-      type: "basic",
-      iconUrl: "./extension-logo.png",
-    });
-    console.log("unable to find device in the devices-list");
-    return;
-  }
-  console.log(`PID is: ${productId}, VID is: ${vendorId}`);
 
   try {
     await device.driver.open();
@@ -443,9 +407,8 @@ async function connectDevice(productId, vendorId) {
   });
   // Send msg for popups to update the mapping to the new device name
   chrome.runtime.sendMessage({
-    action: ACTIONS.DEVICE_CHANGED,
+    action: ACTIONS.BROADCAST_CONNECTED_DEVICES_WITH_MAPPINGS_RESPONSE,
     connectedDevices: connectedDevices,
-    x: "hi",
   });
   console.log("sent device details");
 
@@ -457,6 +420,78 @@ async function connectDevice(productId, vendorId) {
     vendorId: vendorId,
   };
   chrome.storage.local.set(storageObject, function () {});
+}
+
+/**
+ * Checks whether the device is supported by extension and admin policy, and if
+ *     it's already connected and makes notification if not.
+ *
+ * @param {number} productId
+ * @param {number} vendorId
+ * @returns {boolean} indicating whether the device is permitted to connect to
+ *     or not
+ */
+function isDevicePermittedToConnect(productId, vendorId) {
+  let device = undefined;
+  // Make sure that the selected device by the user is supported by extension
+  for (let i = 0; i < DEVICES_LIST.length; i++) {
+    if (DEVICES_LIST[i].driver.filter(productId, vendorId)) {
+      device = DEVICES_LIST[i];
+      break;
+    }
+  }
+
+  if (device === undefined) {
+    chrome.notifications.create("", {
+      title: "Connection Failure",
+      message: "Device not supported.",
+      type: "basic",
+      iconUrl: "./extension-logo.png",
+    });
+    console.log("unable to find device in the devices-list");
+    return false;
+  }
+
+  // Check if the admin policy granted access for the selected device
+  let isDeviceSupportedByAdmin = false;
+  Object.keys(devicesMappingsSupportedByAdmin).forEach((device) => {
+    if (
+      parseInt(device.split("-")[2]) === productId &&
+      parseInt(device.split("-")[1]) === vendorId
+    ) {
+      isDeviceSupportedByAdmin = true;
+    }
+  });
+
+  if (!isDeviceSupportedByAdmin) {
+    chrome.notifications.create("", {
+      title: "Connection Failure",
+      message:
+        "Device not supported by admin.\nContact your admin to grant support.",
+      type: "basic",
+      iconUrl: "./extension-logo.png",
+    });
+    console.log("unable to find device in the devices-list");
+    return false;
+  }
+
+  // Check if user is trying to connect to already connected device
+  if (
+    connectedDevices.some(
+      (device) => device.productId === productId && device.vendorId === vendorId
+    )
+  ) {
+    chrome.notifications.create("", {
+      title: "Already connected",
+      message: "Device you're trying to connect to is already connected.",
+      type: "basic",
+      iconUrl: "./extension-logo.png",
+    });
+    console.log("unable to find device in the devices-list");
+    return false;
+  }
+  console.log(`PID is: ${productId}, VID is: ${vendorId}`);
+  return true;
 }
 
 function startPopupTimer() {

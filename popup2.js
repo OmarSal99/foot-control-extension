@@ -99,7 +99,7 @@ document.addEventListener("DOMContentLoaded", function () {
 window.addEventListener("load", async () => {
   showMappings();
   chrome.runtime.sendMessage({
-    action: ACTIONS.GET_DEVICE_NAME,
+    action: ACTIONS.REQUEST_CONNECTED_DEVICES_WITH_MAPPINGS,
   });
 });
 
@@ -304,23 +304,37 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   //indicate that something changed and recreate the mapping
   if (message.action === ACTIONS.UPDATE_KEY_MAPPING) {
     showMappings();
-  } else if (message.action === ACTIONS.DEVICE_CHANGED) {
-    if (message.connectedDevices?.length > 0) {
-      if (!message?.responseForGetDeviceName) {
-        console.log(message.connectedDevices);
-        const allsupportedDevicesKeyMappings = JSON.parse(
-          localStorage.getItem(LOCAL_STORAGE_ALL_DEVICES_KEY_MAPPINGS)
-        );
-        const userDefinedDeviceMappings = JSON.parse(
-          localStorage.getItem(LOCAL_STORAGE_USER_EDITED_DEVICES_KEY_MAPPINGS)
-        );
-        chrome.runtime.sendMessage({
-          action: ACTIONS.UPDATE_KEY_MAPPING,
-          keyMapping: userDefinedDeviceMappings
-            ? userDefinedDeviceMappings
-            : allsupportedDevicesKeyMappings,
-        });
+  } else if (
+    message.action ===
+    ACTIONS.BROADCAST_CONNECTED_DEVICES_WITH_MAPPINGS_RESPONSE
+  ) {
+    // if (!message?.responseForGetDeviceName) {
+    console.log(message.connectedDevices);
+    const allsupportedDevicesKeyMappings = JSON.parse(
+      localStorage.getItem(LOCAL_STORAGE_ALL_DEVICES_KEY_MAPPINGS)
+    );
+    const userDefinedDeviceMappings = JSON.parse(
+      localStorage.getItem(LOCAL_STORAGE_USER_EDITED_DEVICES_KEY_MAPPINGS)
+    );
+    chrome.runtime.sendMessage({
+      action: ACTIONS.UPDATE_KEY_MAPPING,
+      keyMapping: userDefinedDeviceMappings
+        ? userDefinedDeviceMappings
+        : allsupportedDevicesKeyMappings,
+    });
+    // }
+    const connectedDevicesNames = message.connectedDevices.map(
+      (connectedDevice) =>
+        `${connectedDevice.deviceName}-${connectedDevice.vendorId}-${connectedDevice.productId}`
+    );
+    Object.keys(allsupportedDevicesKeyMappings).forEach((supportedDevice) => {
+      if (!connectedDevicesNames.includes(supportedDevice)) {
+        document
+          .getElementById(`${supportedDevice}-disconnect-button`)
+          .setAttribute("disabled", true);
       }
+    });
+    if (message.connectedDevices?.length > 0) {
       let connectedDevicesNames = "";
       message.connectedDevices.forEach((connectedDevice, index) => {
         connectedDevicesNames += `${index == 0 ? "" : ", "}${

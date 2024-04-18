@@ -36,7 +36,7 @@ let inputIntervalId = null;
 
 //initial function that will run when the device changes (or when open the popup for the first time)
 //it load the stored data for that device name to the ui and update keymapping
-function createMapping(connectedDevices) {
+function createMapping() {
   if (connectedDevices.length > 0) {
     allsupportedDevicesKeyMappings = JSON.parse(
       localStorage.getItem(LOCAL_STORAGE_ALL_DEVICES_KEY_MAPPINGS)
@@ -115,6 +115,19 @@ function createMapping(connectedDevices) {
 //this run every time user change something in the ui, it distroy the old keymapping and rebuild it based on the ui
 //a msg indicate that the mapping update is sent with the new mapping
 function updateMapping() {
+  allsupportedDevicesKeyMappings = retrieveMappingsFromUI();
+  localStorage.setItem(
+    LOCAL_STORAGE_USER_EDITED_DEVICES_KEY_MAPPINGS,
+    JSON.stringify(allsupportedDevicesKeyMappings)
+  );
+  chrome.runtime.sendMessage({
+    action: ACTIONS.UPDATE_KEY_MAPPING,
+    keyMapping: allsupportedDevicesKeyMappings,
+  });
+}
+
+function retrieveMappingsFromUI() {
+  const allSupportedDevicesMappings = {};
   for (const connectedDevice of connectedDevices) {
     const someDeviceKeyMappings = {};
     const device = `${connectedDevice.deviceName}-${connectedDevice.vendorId}-${connectedDevice.productId}`;
@@ -142,17 +155,9 @@ function updateMapping() {
         }
       }
     });
-    allsupportedDevicesKeyMappings[device] = someDeviceKeyMappings;
+    allSupportedDevicesMappings[device] = someDeviceKeyMappings;
   }
-
-  localStorage.setItem(
-    LOCAL_STORAGE_USER_EDITED_DEVICES_KEY_MAPPINGS,
-    JSON.stringify(allsupportedDevicesKeyMappings)
-  );
-  chrome.runtime.sendMessage({
-    action: ACTIONS.UPDATE_KEY_MAPPING,
-    keyMapping: allsupportedDevicesKeyMappings,
-  });
+  return allSupportedDevicesMappings;
 }
 
 // delete a key mapping (row)
@@ -199,7 +204,11 @@ function setInputInterval() {
   }, 100);
 }
 
-//add new mapping row
+/**
+ * Adds new mapping row.
+ *
+ * @returns {HTMLElement}
+ */
 function addNewMapping() {
   const mappingDiv = document.createElement("div");
   mappingDiv.setAttribute("id", "mapping-space");
@@ -273,7 +282,7 @@ function addNewMapping() {
   return newMapping;
 }
 
-function connectDevice() {
+function connectDeviceSelection() {
   //to allow background in an extension to connect and use webHID it needs to ask the user to give access to that device
   //this can only done in a tab for the extension (you can't request it from the normal popup)
   //and it require chrome version 117+
@@ -299,13 +308,13 @@ window.addEventListener("load", async () => {
   //bind buttons and request the device name from the background
   document
     .getElementById("connect-device-button")
-    .addEventListener("click", connectDevice);
+    .addEventListener("click", connectDeviceSelection);
   getDeviceName();
 });
 
 async function getDeviceName() {
   chrome.runtime.sendMessage({
-    action: ACTIONS.GET_DEVICE_NAME,
+    action: ACTIONS.REQUEST_CONNECTED_DEVICES_WITH_MAPPINGS,
   });
 }
 
@@ -314,22 +323,45 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   console.log("msg recieved in popup");
   console.log(message);
   if (message.action === ACTIONS.INPUT_KEY_PRESSED) {
-    //background send msg that a key pressed (on the device) only if the user is inside input field
+    //service worker sends msg that a key pressed (on the device) only if the user is inside input field
     let focusedInput = document.activeElement;
     if (focusedInput.classList.contains("input-key")) {
       focusedInput.value = message.key;
       updateMapping();
     }
     console.log("Input key press deactivated");
-  } else if (message.action === ACTIONS.DEVICE_CHANGED) {
+  } else if (
+    message.action ===
+    ACTIONS.BROADCAST_CONNECTED_DEVICES_WITH_MAPPINGS_RESPONSE
+  ) {
+    connectedDevices = message.connectedDevices;
+    updateConnectedDevicesNamesField();
     if (message.connectedDevices?.length <= 0) {
       console.log("from popup action DEVICE_CHANGED, device name undefined");
-      document.getElementById("device-name").innerHTML = "No device connected.";
+      clearDevicesMappingsSpace();
       return;
     } else {
-      document.getElementById("device-name").innerHTML = `Connected devices:`;
-      connectedDevices = message.connectedDevices;
-      createMapping(message.connectedDevices);
+      createMapping();
     }
   }
 });
+
+/**
+ * Responsible for updating the names of the connected device within the
+ *     correspoding field.
+ */
+function updateConnectedDevicesNamesField() {
+  const devicesNamesField = document.getElementById("device-name");
+  if (connectedDevices > 0) {
+    devicesNamesField.innerHTML = `Connected devices:`;
+  } else {
+    devicesNamesField.innerHTML = "No device connected.";
+  }
+}
+
+/**
+ * Clears the mappings shown for the devices.
+ */
+function clearDevicesMappingsSpace() {
+  document.getElementById("devices-mappings").innerHTML = "";
+}
