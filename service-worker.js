@@ -1,5 +1,5 @@
-import { ACTIONS } from "./actions.js";
-import { DEVICES_LIST } from "./Drivers/devices-list.js";
+import { ACTIONS } from "./constants/actions.js";
+import { DEVICES_LIST } from "./constants/devices-list.js";
 /**
  * @typedef {Object} CharKeyCodePair
  * @property {string} key Single character string representing the key.

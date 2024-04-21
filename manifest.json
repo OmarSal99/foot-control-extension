@@ -5,7 +5,7 @@
   "version": "1.0",
   "permissions": ["tabs", "debugger", "activeTab", "storage", "notifications"],
   "action": {
-    "default_popup": "popup.html",
+    "default_popup": "popup/popup.html",
     "default_icon": "extension-logo.png"
   },
   "content_scripts": [

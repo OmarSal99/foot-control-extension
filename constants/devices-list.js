@@ -1,5 +1,5 @@
-import { GamepadDriver } from "./gamepad-driver.js";
-import { TestDeviceDriver } from "./test-device-driver.js";
+import { GamepadDriver } from "../Drivers/gamepad-driver.js";
+import { TestDeviceDriver } from "../Drivers/test-device-driver.js";
 
 // make sure that no name is repeateds.
 /**

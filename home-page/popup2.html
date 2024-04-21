@@ -2,19 +2,18 @@
 <html>
   <head>
     <title></title>
-    <link rel="stylesheet" href="styles/popup2.css" />
-    <link rel="icon" type="image/x-icon" href="extension-logo.png" />
+    <link rel="stylesheet" href="popup2.css" />
+    <link rel="icon" type="image/x-icon" href="../extension-logo.png" />
   </head>
   <body>
     <header>
       <img
-        src="extension-logo.png"
+        src="../extension-logo.png"
         alt="Ext Img"
         style="width: 50px; height: 50px"
       />
       <h2>Foot pedal extension</h2>
     </header>
-    <!-- <h1>Popup Content</h1> -->
     <div class="row-elements-on-sides">
       <h2 id="device-name" style="word-wrap: break-word; max-width: 300px"></h2>
       <div class="label-value-pair">
@@ -22,9 +21,8 @@
         <input type="text" id="device-input-field" />
         <button id="test-mode-button" disabled>Switch to test mode</button>
       </div>
-      <button id="myButton">Connect a device</button>
+      <button id="connect-device-button">Connect a device</button>
     </div>
-    <!-- <button id="myButton">Connect a device</button> -->
     <script type="module" src="popup2.js"></script>
     <div id="devices-space"></div>
 

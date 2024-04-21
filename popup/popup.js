@@ -1,4 +1,5 @@
-import { ACTIONS } from "./actions.js";
+import { ACTIONS } from "../constants/actions.js";
+import { LOCAL_STORAGE } from "../constants/local-storage-keys.js";
 const LOCAL_STORAGE_ALL_DEVICES_KEY_MAPPINGS = "all devices key mappings";
 const LOCAL_STORAGE_USER_EDITED_DEVICES_KEY_MAPPINGS =
   "devices key mappings set by the user";
@@ -34,20 +35,34 @@ let connectedDevices = [];
 //the interval sends msgs to background rapidly to inform it that the user is in the input field so it pass the input from the device to the popup
 let inputIntervalId = null;
 
+function loadMappingsFromLocalStorage() {
+  allsupportedDevicesKeyMappings = JSON.parse(
+    localStorage.getItem(LOCAL_STORAGE.ALL_DEVICES_KEY_MAPPINGS)
+  );
+  const userDefinedDevicesMappings = JSON.parse(
+    localStorage.getItem(LOCAL_STORAGE.USER_EDITED_DEVICES_KEY_MAPPINGS)
+  );
+
+  if (userDefinedDevicesMappings) {
+    allsupportedDevicesKeyMappings = userDefinedDevicesMappings;
+  }
+}
+
 //initial function that will run when the device changes (or when open the popup for the first time)
 //it load the stored data for that device name to the ui and update keymapping
 function createMapping() {
   if (connectedDevices.length > 0) {
-    allsupportedDevicesKeyMappings = JSON.parse(
-      localStorage.getItem(LOCAL_STORAGE_ALL_DEVICES_KEY_MAPPINGS)
-    );
-    const userDefinedDevicesMappings = JSON.parse(
-      localStorage.getItem(LOCAL_STORAGE_USER_EDITED_DEVICES_KEY_MAPPINGS)
-    );
+    // allsupportedDevicesKeyMappings = JSON.parse(
+    //   localStorage.getItem(LOCAL_STORAGE.ALL_DEVICES_KEY_MAPPINGS)
+    // );
+    // const userDefinedDevicesMappings = JSON.parse(
+    //   localStorage.getItem(LOCAL_STORAGE.USER_EDITED_DEVICES_KEY_MAPPINGS)
+    // );
 
-    if (userDefinedDevicesMappings) {
-      allsupportedDevicesKeyMappings = userDefinedDevicesMappings;
-    }
+    // if (userDefinedDevicesMappings) {
+    //   allsupportedDevicesKeyMappings = userDefinedDevicesMappings;
+    // }
+    loadMappingsFromLocalStorage();
 
     if (allsupportedDevicesKeyMappings) {
       const devicesMappingsSpaceElement =
@@ -117,7 +132,7 @@ function createMapping() {
 function updateMapping() {
   allsupportedDevicesKeyMappings = retrieveMappingsFromUI();
   localStorage.setItem(
-    LOCAL_STORAGE_USER_EDITED_DEVICES_KEY_MAPPINGS,
+    LOCAL_STORAGE.USER_EDITED_DEVICES_KEY_MAPPINGS,
     JSON.stringify(allsupportedDevicesKeyMappings)
   );
   chrome.runtime.sendMessage({
@@ -126,6 +141,11 @@ function updateMapping() {
   });
 }
 
+/**
+ * Updates the devices mappings by checking scanning the UI of the pop up
+ *
+ * @returns {DevicesKeysMappings}
+ */
 function retrieveMappingsFromUI() {
   const allSupportedDevicesMappings = {};
   for (const connectedDevice of connectedDevices) {
@@ -294,7 +314,9 @@ function connectDeviceSelection() {
   );
   //if chrome version is 117+ it will open popup2 so the user can select the device
   if (typeof version === "number" && version >= 117) {
-    chrome.tabs.create({ url: chrome.runtime.getURL("popup2.html") });
+    chrome.tabs.create({
+      url: chrome.runtime.getURL("../home-page/popup2.html"),
+    });
   } else {
     //inform the user that chrome need to be updated
     document.getElementById("device-name").innerHTML =
@@ -335,7 +357,7 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
     ACTIONS.BROADCAST_CONNECTED_DEVICES_WITH_MAPPINGS_RESPONSE
   ) {
     connectedDevices = message.connectedDevices;
-    updateConnectedDevicesNamesField();
+    updateConnectedDevicesNamesField(connectedDevices);
     if (message.connectedDevices?.length <= 0) {
       console.log("from popup action DEVICE_CHANGED, device name undefined");
       clearDevicesMappingsSpace();
@@ -349,10 +371,13 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
 /**
  * Responsible for updating the names of the connected device within the
  *     correspoding field.
+ *
+ * @param {Array<{deviceName: string, vendorId: number, productId: number}>}
+ * connectedDevices
  */
-function updateConnectedDevicesNamesField() {
+function updateConnectedDevicesNamesField(connectedDevices) {
   const devicesNamesField = document.getElementById("device-name");
-  if (connectedDevices > 0) {
+  if (connectedDevices.length > 0) {
     devicesNamesField.innerHTML = `Connected devices:`;
   } else {
     devicesNamesField.innerHTML = "No device connected.";
