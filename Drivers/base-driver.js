@@ -4,7 +4,14 @@ export class BaseDriver {
   hidDevice;
   deviceName;
 
-  open = async (callbackFunction) => {
+  /**
+   * Responsible for opening HID device if given permissions and if not already
+   *     opened, then returns the HID device.
+   *
+   * @returns {HIDDevice | undefined} Returns undefined if the device is
+   *     already opened
+   */
+  open = async () => {
     const devicesWithPermissions = await navigator.hid.getDevices();
     console.log(devicesWithPermissions);
     console.log(this.productId);
@@ -22,14 +29,14 @@ export class BaseDriver {
         return;
       }
       await this.hidDevice.open();
-      // device.addEventListener("inputreport", (event) => {
-      //   this.entryHandler(event, callbackFunction);
-      // });
     }
   };
 
   setEntryHandler = () => {};
 
+  /**
+   * Closes the HID device.
+   */
   close = async () => {
     console.log(this.hidDevice);
     await this.hidDevice.close();

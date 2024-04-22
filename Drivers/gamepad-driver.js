@@ -1,17 +1,29 @@
 import { BaseDriver } from "./base-driver.js";
 
 export class GamepadDriver extends BaseDriver {
-  productId = 21313;
-  vendorId = 1008;
-  deviceName = "Gamepad";
-  // productId = 6;
-  // vendorId = 121;
-
   constructor() {
     super();
     this.lastEntryTime = 0;
+    this.productId = 21313;
+    this.vendorId = 1008;
+    // this.productId = 6;
+    // this.vendorId = 121;
+    this.deviceName = "Gamepad";
   }
 
+  lastEntryTime;
+  productId;
+  vendorId;
+  deviceName;
+
+  /**
+   * Binds function with every HID input then delegates that input to the
+   *     function passed.
+   *
+   * @param {function(string,number,number,string): undefined} callbackFunction
+   *     Responsible for reflecting the device's entry into being mapped as a
+   *     key
+   */
   setEntryHandler = (callbackFunction) => {
     this.hidDevice.addEventListener("inputreport", (event) => {
       console.log("From the entry handler of the gampad driver");
