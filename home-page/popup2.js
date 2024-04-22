@@ -1,12 +1,65 @@
 import { DEVICES_LIST } from "../constants/devices-list.js";
 import { ACTIONS } from "../constants/actions.js";
 import { LOCAL_STORAGE } from "../constants/local-storage-keys.js";
+import { homeView } from "./home-view.js";
 import devicesMappings from "../another-device-mappings.json" assert { type: "json" };
 
-/**
- * @type Array<{deviceName: string, vendorId: number, productId: number}>
- */
-let connectedDevices = [];
+export const homeController = (function () {
+  /**
+   * @type Array<{deviceName: string, vendorId: number, productId: number}>
+   */
+  let connectedDevices = [];
+
+  const getConnectedDevices = () => {
+    return connectedDevices;
+  };
+
+  const setConnectedDevices = (newConnectedDevices) => {
+    connectedDevices = newConnectedDevices;
+  };
+
+  /**
+   * Retrieves device mappings from local storage of both mappings by JSON policy
+   *     file and the overridden mappings by user then returns the mappings by
+   *     the user if found, else it returns mappings of JSON policy file.
+   *
+   * @returns {DevicesKeysMappings}
+   */
+  function loadMappingsFromLocalStorage() {
+    let allsupportedDevicesKeyMappings = JSON.parse(
+      localStorage.getItem(LOCAL_STORAGE.ALL_DEVICES_KEY_MAPPINGS)
+    );
+    /**
+     * @type {DevicesKeysMappings}
+     */
+    const userDefinedDevicesKeysMappings = JSON.parse(
+      localStorage.getItem(LOCAL_STORAGE.USER_EDITED_DEVICES_KEY_MAPPINGS)
+    );
+
+    if (userDefinedDevicesKeysMappings) {
+      allsupportedDevicesKeyMappings = userDefinedDevicesKeysMappings;
+    }
+    return allsupportedDevicesKeyMappings;
+  }
+
+  /**
+   *
+   * @param {string} device Holds device's details on this form name-vid-pid
+   */
+  function disconnectDevice(device) {
+    chrome.runtime.sendMessage({
+      action: ACTIONS.DISCONNECT_DEVICE,
+      device: device,
+    });
+  }
+
+  return {
+    disconnectDevice,
+    getConnectedDevices,
+    loadMappingsFromLocalStorage,
+    setConnectedDevices,
+  };
+})();
 
 /**
  * @typedef {Object.<string, DeviceKeysMappings>} DevicesKeysMappings Holds all
@@ -30,6 +83,12 @@ let connectedDevices = [];
  */
 let allsupportedDevicesKeyMappings = undefined;
 
+/**
+ * Asks for user's selection of the needed HID device to connect to.
+ *
+ * It send a message to service worker to connect to the selected HID device,
+ *     and if some error happens, it shows a notification indicating that.
+ */
 const connectDeviceAttempt = async () => {
   await navigator.hid
     .requestDevice({ filters: [] })
@@ -65,23 +124,26 @@ const connectDeviceAttempt = async () => {
 document.addEventListener("DOMContentLoaded", function () {
   loadMappings();
   //requst a device from webHID when button is pressed
-  document
-    .getElementById("connect-device-button")
-    .addEventListener("click", connectDeviceAttempt);
+  homeView.connectDeviceButtonOnClick(connectDeviceAttempt);
 
   let inputMode = "normal";
-  // const deviceInputModeButton = document.getElementById("test-mode-button");
-  deviceInputModeButtonOnClick(() => {
+  // To preset the input mode as normal
+  chrome.runtime.sendMessage({
+    action: ACTIONS.DEVICE_INPUT_MODE_CHANGED,
+    mode: inputMode,
+  });
+
+  homeView.deviceInputModeButtonOnClick(() => {
     if (inputMode === "normal") {
       inputMode = "test";
-      deviceInputModeButtonNormalModeSwitch();
+      homeView.deviceInputModeButtonTextContent.switchToNormalMode();
       chrome.runtime.sendMessage({
         action: ACTIONS.DEVICE_INPUT_MODE_CHANGED,
         mode: inputMode,
       });
     } else if (inputMode === "test") {
       inputMode = "normal";
-      deviceInputModeButtonTestModeSwitch();
+      homeView.deviceInputModeButtonTextContent.switchToTestMode();
       chrome.runtime.sendMessage({
         action: ACTIONS.DEVICE_INPUT_MODE_CHANGED,
         mode: inputMode,
@@ -89,208 +151,24 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
-  document.getElementById("test-input-button").addEventListener("click", () => {
+  homeView.testInputButtonOnClick(() => {
     chrome.runtime.sendMessage({ action: ACTIONS.TEST_INPUT_SIMULATION });
   });
 });
 
 window.addEventListener("load", async () => {
-  showMappings();
+  homeView.showMappings();
   chrome.runtime.sendMessage({
     action: ACTIONS.REQUEST_CONNECTED_DEVICES_WITH_MAPPINGS,
   });
 });
 
-function deviceInputModeButtonOnClick(callbackFunction) {
-  document
-    .getElementById("test-mode-button")
-    .addEventListener("click", callbackFunction);
-}
-
-function deviceInputModeButtonTestModeSwitch() {
-  document.getElementById("test-mode-button").textContent =
-    "Switch to test mode";
-}
-
-function deviceInputModeButtonNormalModeSwitch() {
-  document.getElementById("test-mode-button").textContent =
-    "Switch to normal mode";
-}
-
 /**
- * Retrieves device mappings from local storage of both mappings by JSON policy
- *     file and the overridden mappings by user then returns the mappings by
- *     the user if found, else it returns mappings of JSON policy file.
+ * Loads devices' mappings from JSON file loaded from policy admin.
  *
- * @returns {DeviceKeysMappings}
+ * Checks what devices the admin permitted, then loads their mappings based on
+ *     the extension's support for the mentioned devices.
  */
-function loadMappingsFromLocalStorage() {
-  let allsupportedDevicesKeyMappings = JSON.parse(
-    localStorage.getItem(LOCAL_STORAGE.ALL_DEVICES_KEY_MAPPINGS)
-  );
-  /**
-   * @type {DevicesKeysMappings}
-   */
-  const userDefinedDevicesKeysMappings = JSON.parse(
-    localStorage.getItem(LOCAL_STORAGE.USER_EDITED_DEVICES_KEY_MAPPINGS)
-  );
-
-  if (userDefinedDevicesKeysMappings) {
-    allsupportedDevicesKeyMappings = userDefinedDevicesKeysMappings;
-  }
-  return allsupportedDevicesKeyMappings;
-}
-
-//this function load all mapping for all device from local storage and show them
-//the local storage is teh same as popup so it just read from it and rely on popup to make any updates on it
-function showMappings() {
-  // let allsupportedDevicesKeyMappings = JSON.parse(
-  //   localStorage.getItem(LOCAL_STORAGE.ALL_DEVICES_KEY_MAPPINGS)
-  // );
-  // /**
-  //  * @type {DevicesKeysMappings}
-  //  */
-  // const userDefinedDevicesKeysMappings = JSON.parse(
-  //   localStorage.getItem(LOCAL_STORAGE.USER_EDITED_DEVICES_KEY_MAPPINGS)
-  // );
-
-  // if (userDefinedDevicesKeysMappings) {
-  //   allsupportedDevicesKeyMappings = userDefinedDevicesKeysMappings;
-  // }
-  const allsupportedDevicesKeyMappings = loadMappingsFromLocalStorage();
-  let devicesSpace = document.getElementById("devices-space");
-
-  while (devicesSpace.firstChild) {
-    devicesSpace.removeChild(devicesSpace.firstChild);
-  }
-
-  if (allsupportedDevicesKeyMappings) {
-    for (let someDeviceKeyMappingsKey of Object.keys(
-      allsupportedDevicesKeyMappings
-    )) {
-      const arrayedDeviceDetails = someDeviceKeyMappingsKey.split("-");
-      const deviceDetails = {
-        name: arrayedDeviceDetails[0],
-        vendorId: arrayedDeviceDetails[1],
-        productId: arrayedDeviceDetails[2],
-      };
-      let mappingDiv = document.createElement("div");
-      mappingDiv.classList.add("mapping-div");
-      mappingDiv.setAttribute("id", someDeviceKeyMappingsKey);
-      const deviceDivHeader = document.createElement("div");
-      deviceDivHeader.setAttribute("class", "row-elements-on-sides");
-      const disconnectButton = document.createElement("button");
-      disconnectButton.setAttribute(
-        "id",
-        `${someDeviceKeyMappingsKey}-disconnect-button`
-      );
-      connectedDevices.some(
-        (connectedDevice) =>
-          connectedDevice.deviceName == deviceDetails.name &&
-          connectedDevice.productId == deviceDetails.productId &&
-          connectedDevice.vendorId == deviceDetails.vendorId
-      )
-        ? undefined
-        : disconnectButton.setAttribute("disabled", true);
-      disconnectButton.innerHTML = "Disconnect";
-      disconnectButton.setAttribute("style", "margin-right: 15px");
-      disconnectButton.addEventListener("click", () => {
-        disconnectDevice(someDeviceKeyMappingsKey);
-        disconnectButton.setAttribute("disabled", true);
-      });
-      let nameElement = document.createElement("h2");
-      nameElement.innerHTML = `Device name: ${deviceDetails.name}`;
-      deviceDivHeader.appendChild(nameElement);
-      deviceDivHeader.appendChild(disconnectButton);
-      mappingDiv.appendChild(deviceDivHeader);
-      const vid = document.createElement("label");
-      vid.innerHTML = `Vendor id:  ${deviceDetails.vendorId}`;
-      const pid = document.createElement("label");
-      pid.innerHTML = `Product id:  ${deviceDetails.productId}`;
-      mappingDiv.appendChild(vid);
-      mappingDiv.appendChild(pid);
-      const keyMappingsWrapper = document.createElement("div");
-      keyMappingsWrapper.style.marginTop = "10px";
-
-      for (
-        let i = 0;
-        i <
-        Object.keys(allsupportedDevicesKeyMappings[someDeviceKeyMappingsKey])
-          .length;
-        i++
-      ) {
-        let keyMapping = document.createElement("div");
-        keyMapping.classList.add("key-mapping");
-
-        let inputKeyLabel = document.createElement("label");
-        inputKeyLabel.innerHTML = "Key:";
-        inputKeyLabel.classList.add("input-key-label");
-        keyMapping.appendChild(inputKeyLabel);
-
-        let inputElement = document.createElement("input");
-        inputElement.type = "text";
-        inputElement.classList.add("input-key");
-        inputElement.disabled = true;
-        let deviceInputKeyToShow = Object.keys(
-          allsupportedDevicesKeyMappings[someDeviceKeyMappingsKey]
-        ).filter(
-          (deviceInputKey) =>
-            allsupportedDevicesKeyMappings[someDeviceKeyMappingsKey][
-              deviceInputKey
-            ].order ==
-            i + 1
-        )[0];
-        inputElement.value = deviceInputKeyToShow;
-        keyMapping.appendChild(inputElement);
-
-        let outputKeyLabel = document.createElement("label");
-        outputKeyLabel.innerHTML = "Mapping:";
-        outputKeyLabel.classList.add("output-key-label");
-        keyMapping.appendChild(outputKeyLabel);
-
-        let outputContainer = document.createElement("div");
-        outputContainer.classList.add("output-container");
-        console.log(allsupportedDevicesKeyMappings[someDeviceKeyMappingsKey]);
-        console.log(deviceInputKeyToShow);
-        for (
-          let j = 0;
-          j <
-          allsupportedDevicesKeyMappings[someDeviceKeyMappingsKey][
-            deviceInputKeyToShow
-          ].outputKeys.length;
-          j++
-        ) {
-          let outputKeyElement = document.createElement("input");
-          outputKeyElement.type = "text";
-          outputKeyElement.value =
-            allsupportedDevicesKeyMappings[someDeviceKeyMappingsKey][
-              deviceInputKeyToShow
-            ].outputKeys[j]["key"];
-          outputKeyElement.disabled = true;
-          outputKeyElement.classList.add("output-key");
-          outputContainer.appendChild(outputKeyElement);
-        }
-        keyMapping.appendChild(outputContainer);
-        keyMappingsWrapper.append(keyMapping);
-        mappingDiv.appendChild(keyMapping);
-      }
-      mappingDiv.appendChild(keyMappingsWrapper);
-      devicesSpace.appendChild(mappingDiv);
-    }
-  }
-}
-
-/**
- *
- * @param {string} device Holds device's details on this form name-vid-pid
- */
-function disconnectDevice(device) {
-  chrome.runtime.sendMessage({
-    action: ACTIONS.DISCONNECT_DEVICE,
-    device: device,
-  });
-}
-
 function loadMappings() {
   const supportedDevices = [];
   // to find what devices are supported are also listed in the JSON config file
@@ -341,81 +219,42 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   console.log("msg recieved in popup2", message);
   //indicate that something changed and recreate the mapping
   if (message.action === ACTIONS.UPDATE_KEY_MAPPING) {
-    showMappings();
+    homeView.showMappings();
   } else if (
     message.action ===
     ACTIONS.BROADCAST_CONNECTED_DEVICES_WITH_MAPPINGS_RESPONSE
   ) {
-    // if (!message?.responseForGetDeviceName) {
     console.log(message.connectedDevices);
-    const allsupportedDevicesKeyMappings = loadMappingsFromLocalStorage();
+    const allsupportedDevicesKeyMappings =
+      homeController.loadMappingsFromLocalStorage();
     chrome.runtime.sendMessage({
       action: ACTIONS.UPDATE_KEY_MAPPING,
       keyMapping: allsupportedDevicesKeyMappings,
     });
-    // }
     const connectedDevicesNames = message.connectedDevices.map(
       (connectedDevice) =>
         `${connectedDevice.deviceName}-${connectedDevice.vendorId}-${connectedDevice.productId}`
     );
     Object.keys(allsupportedDevicesKeyMappings).forEach((supportedDevice) => {
       if (!connectedDevicesNames.includes(supportedDevice)) {
-        deviceDisconnectButton.disable(supportedDevice);
+        homeView.deviceDisconnectButton.disable(supportedDevice);
       }
     });
-    connectedDevices = message.connectedDevices;
+    homeController.setConnectedDevices(message.connectedDevices);
     if (message.connectedDevices?.length > 0) {
       let connectedDevicesNames = "";
-      connectedDevices.forEach((connectedDevice, index) => {
+      homeController.getConnectedDevices().forEach((connectedDevice, index) => {
         connectedDevicesNames += `${index == 0 ? "" : ", "}${
           connectedDevice.deviceName
         }`;
         const fullDeviceName = `${connectedDevice.deviceName}-${connectedDevice.vendorId}-${connectedDevice.productId}`;
-        deviceDisconnectButton.enable(fullDeviceName);
+        homeView.deviceDisconnectButton.enable(fullDeviceName);
       });
-      updateDevicesConnectedLabel(connectedDevicesNames);
-      testModeButton.enable();
+      homeView.updateDevicesConnectedLabel(connectedDevicesNames);
+      homeView.testModeButton.enable();
     } else {
-      updateDevicesConnectedLabel();
-      testModeButton.disable();
+      homeView.updateDevicesConnectedLabel();
+      homeView.testModeButton.disable();
     }
   }
 });
-
-const deviceDisconnectButton = {
-  disable: (deviceFullName) => {
-    document
-      .getElementById(`${deviceFullName}-disconnect-button`)
-      .setAttribute("disabled", true);
-  },
-  enable: (deviceFullName) => {
-    document
-      .getElementById(`${deviceFullName}-disconnect-button`)
-      .removeAttribute("disabled");
-  },
-};
-
-const testModeButton = {
-  enable: () => {
-    document.getElementById("test-mode-button").removeAttribute("disabled");
-  },
-  disable: () => {
-    document.getElementById("test-mode-button").setAttribute("disabled", true);
-  },
-};
-
-/**
- * Updates the field of names of connected devices.
- *
- * @param {string | undefined} devicesConnected Respresents the names of the
- *     connected devices, when undefined the field will convey that no device
- *     is connected.
- */
-function updateDevicesConnectedLabel(devicesConnected) {
-  const devicesNameLabel = document.getElementById("device-name");
-  if (devicesConnected) {
-    devicesNameLabel.textContent = `Devices connected: ${devicesConnected}`;
-  } else {
-    devicesNameLabel.textContent = `No device connected`;
-  }
-}

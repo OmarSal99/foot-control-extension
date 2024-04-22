@@ -4,9 +4,6 @@ export class BaseDriver {
   hidDevice;
   deviceName;
 
-  filter = (productId, vendorId) => {
-    return productId == this.productId && vendorId == this.vendorId;
-  };
   open = async (callbackFunction) => {
     const devicesWithPermissions = await navigator.hid.getDevices();
     console.log(devicesWithPermissions);

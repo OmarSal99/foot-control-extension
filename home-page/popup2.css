@@ -28,7 +28,6 @@ button {
   transition: background-color 0.2s ease;
   /* align-self: flex-end; */
   text-align: center;
-  min-width: 70px;
   width: fit-content;
   white-space: nowrap;
 }
@@ -120,6 +119,7 @@ h2 {
 
 .row-elements-on-sides {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: baseline;
 }
@@ -129,7 +129,3 @@ h2 {
   gap: 5px;
   align-items: baseline;
 }
-/* h2 {
-  margin: 0px;
-  padding: 0px;
-} */

@@ -73,9 +73,11 @@ let deviceDetails = undefined;
  */
 let deviceInputMode = "normal";
 
-// When any HID device is disconnected, this checks if it's one of the
-// supported device and if yes then it generates a chrome notification
-// and sends a message through the extension to convey device disconnection
+/**
+ * Checks for any HID device of the supported ones disonnection then makes
+ *     chrome message through the extension to convey
+ *     the device disconnection, and makes notification to notify the user.
+ */
 navigator.hid.addEventListener("disconnect", ({ device }) => {
   // check if the disconnected device is one of the devices that were connected
   const disconnectedDevice = connectedDevices.find(
@@ -102,8 +104,15 @@ navigator.hid.addEventListener("disconnect", ({ device }) => {
   }
 });
 
-// let isFirstTime = true;
 // send command and return a promise, the promise is resolved when sending command is done to do clean up
+/**
+ * Responsible for making keydown event with the key passed to it using
+ *     chrome's debugger.
+ *
+ * @param {*} tabs
+ * @param {string} key The key/char to be made as keydown event.
+ * @returns {Promise<undefined>}
+ */
 function sendCommand(tabs, key) {
   return new Promise((resolve, reject) => {
     chrome.debugger.attach({ tabId: tabs[0].id }, "1.0", async function () {
@@ -136,35 +145,6 @@ chrome.runtime.onMessage.addListener(async function (
   sender,
   sendResponse
 ) {
-  //if it is the fist time it try to connect to the same device as it was the last time
-  //this will called if the service-worker go to sleep and then wakeup
-  //if the chrome is closed permissions will be removed next time you open it, so user have to reselect the device to connect to
-  // if (isFirstTime === true) {
-  //   await new Promise((resolve, reject) => {
-  //     chrome.storage.local.get(
-  //       DEVICE_DETAILS_SERVICE_WORKER_LOCAL_STORAGE,
-  //       async function (result) {
-  //         if (
-  //           result[DEVICE_DETAILS_SERVICE_WORKER_LOCAL_STORAGE] !== undefined
-  //         ) {
-  //           deviceDetails = result[DEVICE_DETAILS_SERVICE_WORKER_LOCAL_STORAGE];
-  //           await connectDevice(
-  //             deviceDetails["productId"],
-  //             deviceDetails["vendorId"]
-  //           );
-  //           // isFirstTime = false;
-  //         }
-  //         isFirstTime = false;
-  //         console.log(
-  //           "intial block done at",
-  //           new Date().toLocaleTimeString(undefined, { timeStyle: "medium" })
-  //         );
-  //         resolve();
-  //       }
-  //     );
-  //   });
-  // }
-
   console.log(message);
   switch (message.action) {
     case ACTIONS.UPDATE_KEY_MAPPING:
@@ -215,7 +195,10 @@ chrome.runtime.onMessage.addListener(async function (
       const productId = message.device.split("-")[2];
       const vendorId = message.device.split("-")[1];
       for (let i = 0; i < DEVICES_LIST.length; i++) {
-        if (DEVICES_LIST[i].driver.filter(productId, vendorId)) {
+        if (
+          DEVICES_LIST[i].driver.productId == productId &&
+          DEVICES_LIST[i].driver.vendorId == vendorId
+        ) {
           deviceDriverToDisconnect = DEVICES_LIST[i];
           break;
         }
@@ -241,7 +224,19 @@ chrome.runtime.onMessage.addListener(async function (
   }
 });
 
+/**
+ * Responsible for taking the device's entry and reflects it to its
+ *     corresponding mapping.
+ *
+ * @param {string} deviceName
+ * @param {number} vendorId
+ * @param {number} productId
+ * @param {string} key
+ */
 const handleKeyInput = async (deviceName, vendorId, productId, key) => {
+  console.log(
+    `typeof vid ${typeof vendorId}, type of pid ${typeof productId}, type of key pressed ${typeof key}`
+  );
   //resolve the input key to it output keys, it make sure that every output only run when the previous one is done
 
   //if the user is in the input field, there is no output keys instead it just send the input key to the popup
@@ -272,6 +267,7 @@ const handleKeyInput = async (deviceName, vendorId, productId, key) => {
   chrome.tabs.query(
     { active: true, currentWindow: true },
     async function (tabs) {
+      console.log(typeof tabs);
       let i = 0;
       //loop on the output keys
       for (i = 0; i < outputKeys.length; i++) {
@@ -370,7 +366,10 @@ async function connectDevice(productId, vendorId) {
   let device = undefined;
   // Make sure that the selected device by the user is supported by extension
   for (let i = 0; i < DEVICES_LIST.length; i++) {
-    if (DEVICES_LIST[i].driver.filter(productId, vendorId)) {
+    if (
+      DEVICES_LIST[i].driver.productId == productId &&
+      DEVICES_LIST[i].driver.vendorId == vendorId
+    ) {
       device = DEVICES_LIST[i];
       break;
     }
@@ -435,7 +434,10 @@ function isDevicePermittedToConnect(productId, vendorId) {
   let device = undefined;
   // Make sure that the selected device by the user is supported by extension
   for (let i = 0; i < DEVICES_LIST.length; i++) {
-    if (DEVICES_LIST[i].driver.filter(productId, vendorId)) {
+    if (
+      DEVICES_LIST[i].driver.productId == productId &&
+      DEVICES_LIST[i].driver.vendorId == vendorId
+    ) {
       device = DEVICES_LIST[i];
       break;
     }
@@ -494,6 +496,10 @@ function isDevicePermittedToConnect(productId, vendorId) {
   return true;
 }
 
+/**
+ * Responsible for forwarding the device's entry for the popup to configure
+ *     some the used device's mappings by the user.
+ */
 function startPopupTimer() {
   // Clear the existing timer (if any)
   clearTimeout(popupTimer);
