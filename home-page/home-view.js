@@ -97,6 +97,7 @@ export const homeView = (function () {
     }
 
     if (allsupportedDevicesKeyMappings) {
+      // Iterate over every device supported
       for (let someDeviceKeyMappingsKey of Object.keys(
         allsupportedDevicesKeyMappings
       )) {
@@ -118,6 +119,8 @@ export const homeView = (function () {
           "id",
           `${someDeviceKeyMappingsKey}-disconnect-button`
         );
+        // Check if the device is connected or not in order to set the disabled
+        //     attribute of the disconnect button for the device
         homeController
           .getConnectedDevices()
           .some(
@@ -153,6 +156,8 @@ export const homeView = (function () {
         const keyMappingsWrapper = document.createElement("div");
         keyMappingsWrapper.style.marginTop = "10px";
 
+        // Iterate over every device's keymappings on order to show them
+        //     on UI
         for (
           let i = 0;
           i <
@@ -171,6 +176,7 @@ export const homeView = (function () {
           inputElement.type = "text";
           inputElement.classList.add("input-key");
           inputElement.disabled = true;
+          // Extract device's input based on order
           const deviceInputKeyToShow = Object.keys(
             allsupportedDevicesKeyMappings[someDeviceKeyMappingsKey]
           ).filter(
@@ -195,6 +201,8 @@ export const homeView = (function () {
           console.log(allsupportedDevicesKeyMappings[someDeviceKeyMappingsKey]);
           console.log(deviceInputKeyToShow);
 
+          // Iterate over the mappings of the extracted device's input
+          //     in order to show them
           for (
             let j = 0;
             j <

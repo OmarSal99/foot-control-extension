@@ -10,10 +10,21 @@ export const homeController = (function () {
    */
   let connectedDevices = [];
 
+  /**
+   * Returns the list of connected devices.
+   *
+   * @returns {Array<{deviceName: string, vendorId: number, productId: number}>}
+   */
   const getConnectedDevices = () => {
     return connectedDevices;
   };
 
+  /**
+   * Sets the list of connected devices.
+   *
+   * @param {Array<{deviceName: string, vendorId: number, productId: number}>}
+   *     newConnectedDevices The list of connected devices
+   */
   const setConnectedDevices = (newConnectedDevices) => {
     connectedDevices = newConnectedDevices;
   };
@@ -43,6 +54,8 @@ export const homeController = (function () {
   }
 
   /**
+   * Responsible for broadcasting the action of device disconnetion along with
+   *     the device disonnected.
    *
    * @param {string} device Holds device's details on this form name-vid-pid
    */
@@ -218,43 +231,48 @@ function loadMappings() {
 chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   console.log("msg recieved in popup2", message);
   //indicate that something changed and recreate the mapping
-  if (message.action === ACTIONS.UPDATE_KEY_MAPPING) {
-    homeView.showMappings();
-  } else if (
-    message.action ===
-    ACTIONS.BROADCAST_CONNECTED_DEVICES_WITH_MAPPINGS_RESPONSE
-  ) {
-    console.log(message.connectedDevices);
-    const allsupportedDevicesKeyMappings =
-      homeController.loadMappingsFromLocalStorage();
-    chrome.runtime.sendMessage({
-      action: ACTIONS.UPDATE_KEY_MAPPING,
-      keyMapping: allsupportedDevicesKeyMappings,
-    });
-    const connectedDevicesNames = message.connectedDevices.map(
-      (connectedDevice) =>
-        `${connectedDevice.deviceName}-${connectedDevice.vendorId}-${connectedDevice.productId}`
-    );
-    Object.keys(allsupportedDevicesKeyMappings).forEach((supportedDevice) => {
-      if (!connectedDevicesNames.includes(supportedDevice)) {
-        homeView.deviceDisconnectButton.disable(supportedDevice);
-      }
-    });
-    homeController.setConnectedDevices(message.connectedDevices);
-    if (message.connectedDevices?.length > 0) {
-      let connectedDevicesNames = "";
-      homeController.getConnectedDevices().forEach((connectedDevice, index) => {
-        connectedDevicesNames += `${index == 0 ? "" : ", "}${
-          connectedDevice.deviceName
-        }`;
-        const fullDeviceName = `${connectedDevice.deviceName}-${connectedDevice.vendorId}-${connectedDevice.productId}`;
-        homeView.deviceDisconnectButton.enable(fullDeviceName);
+  switch (message.action) {
+    case ACTIONS.UPDATE_KEY_MAPPING:
+      homeView.showMappings();
+      break;
+
+    case ACTIONS.BROADCAST_CONNECTED_DEVICES_WITH_MAPPINGS_RESPONSE:
+      console.log(message.connectedDevices);
+      const allsupportedDevicesKeyMappings =
+        homeController.loadMappingsFromLocalStorage();
+      chrome.runtime.sendMessage({
+        action: ACTIONS.UPDATE_KEY_MAPPING,
+        keyMapping: allsupportedDevicesKeyMappings,
       });
-      homeView.updateDevicesConnectedLabel(connectedDevicesNames);
-      homeView.testModeButton.enable();
-    } else {
-      homeView.updateDevicesConnectedLabel();
-      homeView.testModeButton.disable();
-    }
+      const connectedDevicesNames = message.connectedDevices.map(
+        (connectedDevice) =>
+          `${connectedDevice.deviceName}-${connectedDevice.vendorId}-${connectedDevice.productId}`
+      );
+      Object.keys(allsupportedDevicesKeyMappings).forEach((supportedDevice) => {
+        if (!connectedDevicesNames.includes(supportedDevice)) {
+          homeView.deviceDisconnectButton.disable(supportedDevice);
+        }
+      });
+      homeController.setConnectedDevices(message.connectedDevices);
+
+      if (message.connectedDevices?.length > 0) {
+        // Make the combination of connected devices names as one string
+        let connectedDevicesNames = "";
+        homeController
+          .getConnectedDevices()
+          .forEach((connectedDevice, index) => {
+            connectedDevicesNames += `${index == 0 ? "" : ", "}${
+              connectedDevice.deviceName
+            }`;
+            const fullDeviceName = `${connectedDevice.deviceName}-${connectedDevice.vendorId}-${connectedDevice.productId}`;
+            homeView.deviceDisconnectButton.enable(fullDeviceName);
+          });
+        homeView.updateDevicesConnectedLabel(connectedDevicesNames);
+        homeView.testModeButton.enable();
+      } else {
+        homeView.updateDevicesConnectedLabel();
+        homeView.testModeButton.disable();
+      }
+      break;
   }
 });
