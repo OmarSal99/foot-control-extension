@@ -37,7 +37,7 @@ export const homeController = (function () {
    * @returns {DevicesKeysMappings}
    */
   function loadMappingsFromLocalStorage() {
-    let allsupportedDevicesKeyMappings = JSON.parse(
+    let allSupportedDevicesKeyMappings = JSON.parse(
       localStorage.getItem(LOCAL_STORAGE.ALL_DEVICES_KEY_MAPPINGS)
     );
     /**
@@ -48,9 +48,25 @@ export const homeController = (function () {
     );
 
     if (userDefinedDevicesKeysMappings) {
-      allsupportedDevicesKeyMappings = userDefinedDevicesKeysMappings;
+      const listOfNewSupportedDevices = [];
+      Object.keys(allSupportedDevicesKeyMappings).forEach((device) => {
+        if (
+          !Object.keys(userDefinedDevicesKeysMappings).some(
+            (oldDevice) => oldDevice == device
+          )
+        ) {
+          listOfNewSupportedDevices.push(device);
+        }
+      });
+
+      listOfNewSupportedDevices.forEach((deviceName) => {
+        userDefinedDevicesKeysMappings[deviceName] =
+          allSupportedDevicesKeyMappings[deviceName];
+      });
+
+      allSupportedDevicesKeyMappings = userDefinedDevicesKeysMappings;
     }
-    return allsupportedDevicesKeyMappings;
+    return allSupportedDevicesKeyMappings;
   }
 
   /**
@@ -94,7 +110,7 @@ export const homeController = (function () {
 /**
  * @type {DevicesKeysMappings}
  */
-let allsupportedDevicesKeyMappings = undefined;
+let allSupportedDevicesKeyMappings = undefined;
 
 /**
  * Asks for user's selection of the needed HID device to connect to.
@@ -118,7 +134,7 @@ const connectDeviceAttempt = async () => {
       // to connect to it
       chrome.runtime.sendMessage({
         action: ACTIONS.DEVICE_PERM_UPDATED,
-        devicesKeyMappingsSupportedByAdmin: allsupportedDevicesKeyMappings,
+        devicesKeyMappingsSupportedByAdmin: allSupportedDevicesKeyMappings,
         productId: devices[0]?.productId,
         vendorId: devices[0]?.vendorId,
       });
@@ -199,11 +215,11 @@ function loadMappings() {
     }
   });
   console.log(supportedDevices);
-  allsupportedDevicesKeyMappings = {};
+  allSupportedDevicesKeyMappings = {};
 
   for (const device of supportedDevices) {
     const mappings = {};
-    allsupportedDevicesKeyMappings[
+    allSupportedDevicesKeyMappings[
       `${device.deviceName}-${device.vid}-${device.pid}`
     ] = {};
 
@@ -213,7 +229,7 @@ function loadMappings() {
         key: char,
         keycode: char.charCodeAt(0),
       }));
-      allsupportedDevicesKeyMappings[
+      allSupportedDevicesKeyMappings[
         `${device.deviceName}-${device.vid}-${device.pid}`
       ][key] = {
         label: device.keyMappings[key].label,
@@ -223,7 +239,7 @@ function loadMappings() {
     }
     localStorage.setItem(
       LOCAL_STORAGE.ALL_DEVICES_KEY_MAPPINGS,
-      JSON.stringify(allsupportedDevicesKeyMappings)
+      JSON.stringify(allSupportedDevicesKeyMappings)
     );
   }
 }
@@ -238,17 +254,17 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
 
     case ACTIONS.BROADCAST_CONNECTED_DEVICES_WITH_MAPPINGS_RESPONSE:
       console.log(message.connectedDevices);
-      const allsupportedDevicesKeyMappings =
+      const allSupportedDevicesKeyMappings =
         homeController.loadMappingsFromLocalStorage();
       chrome.runtime.sendMessage({
         action: ACTIONS.UPDATE_KEY_MAPPING,
-        keyMapping: allsupportedDevicesKeyMappings,
+        keyMapping: allSupportedDevicesKeyMappings,
       });
       const connectedDevicesNames = message.connectedDevices.map(
         (connectedDevice) =>
           `${connectedDevice.deviceName}-${connectedDevice.vendorId}-${connectedDevice.productId}`
       );
-      Object.keys(allsupportedDevicesKeyMappings).forEach((supportedDevice) => {
+      Object.keys(allSupportedDevicesKeyMappings).forEach((supportedDevice) => {
         if (!connectedDevicesNames.includes(supportedDevice)) {
           homeView.deviceDisconnectButton.disable(supportedDevice);
         }

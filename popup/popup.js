@@ -61,12 +61,28 @@ export const popupController = (function () {
     allSupportedDevicesKeyMappings = JSON.parse(
       localStorage.getItem(LOCAL_STORAGE.ALL_DEVICES_KEY_MAPPINGS)
     );
-    const userDefinedDevicesMappings = JSON.parse(
+    const userDefinedDevicesKeysMappings = JSON.parse(
       localStorage.getItem(LOCAL_STORAGE.USER_EDITED_DEVICES_KEY_MAPPINGS)
     );
 
-    if (userDefinedDevicesMappings) {
-      allSupportedDevicesKeyMappings = userDefinedDevicesMappings;
+    if (userDefinedDevicesKeysMappings) {
+      const listOfNewSupportedDevices = [];
+      Object.keys(allSupportedDevicesKeyMappings).forEach((device) => {
+        if (
+          !Object.keys(userDefinedDevicesKeysMappings).some(
+            (oldDevice) => oldDevice == device
+          )
+        ) {
+          listOfNewSupportedDevices.push(device);
+        }
+      });
+
+      listOfNewSupportedDevices.forEach((deviceName) => {
+        userDefinedDevicesKeysMappings[deviceName] =
+          allSupportedDevicesKeyMappings[deviceName];
+      });
+
+      allSupportedDevicesKeyMappings = userDefinedDevicesKeysMappings;
     }
 
     console.log(allSupportedDevicesKeyMappings);
