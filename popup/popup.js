@@ -112,11 +112,8 @@ const requestConnectedDevices = () => {
 };
 
 window.addEventListener("load", async () => {
-  //bind buttons and request the device name from the background
-  // popupView.connectDeviceButtonOnClick(popupView.connectDeviceSelection);
-  document
-    .getElementById("connect-device-button")
-    .addEventListener("click", popupView.connectDeviceSelection);
+  //bind buttons and request the connected devices from the background
+  popupView.connectDeviceButtonOnClick(popupView.connectDeviceSelection);
   requestConnectedDevices();
 });
 
