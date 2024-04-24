@@ -1,8 +1,6 @@
-import { DEVICES_LIST } from "../constants/devices-list.js";
 import { ACTIONS } from "../constants/actions.js";
-import { LOCAL_STORAGE } from "../constants/local-storage-keys.js";
 import { homeView } from "./home-view.js";
-import devicesMappings from "../another-device-mappings.json" assert { type: "json" };
+import { devicesWithMappingsModel } from "../models/device-mappings-model.js";
 
 export const homeController = (function () {
   /**
@@ -37,54 +35,7 @@ export const homeController = (function () {
    * @returns {DevicesKeysMappings}
    */
   function loadMappingsFromLocalStorage() {
-    let allSupportedDevicesKeyMappings = JSON.parse(
-      localStorage.getItem(LOCAL_STORAGE.DEVICES_MAIN_KEY_MAPPINGS)
-    );
-    /**
-     * @type {DevicesKeysMappings}
-     */
-    const userDefinedDevicesKeysMappings = JSON.parse(
-      localStorage.getItem(LOCAL_STORAGE.USER_EDITED_DEVICES_KEY_MAPPINGS)
-    );
-
-    if (userDefinedDevicesKeysMappings) {
-      // To append the newly supported devices.
-      const listOfNewSupportedDevices = [];
-      Object.keys(allSupportedDevicesKeyMappings).forEach((device) => {
-        if (
-          !Object.keys(userDefinedDevicesKeysMappings).some(
-            (oldDevice) => oldDevice == device
-          )
-        ) {
-          listOfNewSupportedDevices.push(device);
-        }
-      });
-
-      listOfNewSupportedDevices.forEach((deviceName) => {
-        userDefinedDevicesKeysMappings[deviceName] =
-          allSupportedDevicesKeyMappings[deviceName];
-      });
-
-      // To remove any dropped devices that were supported.
-      const devicesToRemove = [];
-      Object.keys(userDefinedDevicesKeysMappings).forEach(
-        (oldSupportedDevice) => {
-          if (
-            !Object.keys(allSupportedDevicesKeyMappings).some(
-              (device) => device == oldSupportedDevice
-            )
-          ) {
-            devicesToRemove.push(oldSupportedDevice);
-          }
-        }
-      );
-
-      devicesToRemove.forEach((device) => {
-        delete userDefinedDevicesKeysMappings[device];
-      });
-      allSupportedDevicesKeyMappings = userDefinedDevicesKeysMappings;
-    }
-    return allSupportedDevicesKeyMappings;
+    return devicesWithMappingsModel.loadMappings();
   }
 
   /**
@@ -126,11 +77,6 @@ export const homeController = (function () {
  */
 
 /**
- * @type {DevicesKeysMappings}
- */
-let allSupportedDevicesKeyMappings = undefined;
-
-/**
  * Asks for user's selection of the needed HID device to connect to.
  *
  * It send a message to service worker to connect to the selected HID device,
@@ -152,7 +98,8 @@ const connectDeviceAttempt = async () => {
       // to connect to it
       chrome.runtime.sendMessage({
         action: ACTIONS.DEVICE_PERM_UPDATED,
-        devicesKeyMappingsSupportedByAdmin: allSupportedDevicesKeyMappings,
+        devicesKeyMappingsSupportedByAdmin:
+          devicesWithMappingsModel.getDevicesMainKeyMappings(),
         productId: devices[0]?.productId,
         vendorId: devices[0]?.vendorId,
       });
@@ -169,7 +116,7 @@ const connectDeviceAttempt = async () => {
 };
 
 document.addEventListener("DOMContentLoaded", function () {
-  loadMappings();
+  devicesWithMappingsModel.loadMappingsFromPolicyFile();
   //requst a device from webHID when button is pressed
   homeView.connectDeviceButtonOnClick(connectDeviceAttempt);
 
@@ -210,58 +157,6 @@ window.addEventListener("load", async () => {
   });
 });
 
-/**
- * Loads devices' mappings from JSON file loaded from policy admin.
- *
- * Checks what devices the admin permitted, then loads their mappings based on
- *     the extension's support for the mentioned devices.
- */
-function loadMappings() {
-  const supportedDevices = [];
-  // to find what devices are supported are also listed in the JSON config file
-  DEVICES_LIST.forEach((device) => {
-    const filterResult = devicesMappings.filter((deviceMapping) => {
-      return (
-        device.driver.vendorId === deviceMapping.vid &&
-        device.driver.productId === deviceMapping.pid
-      );
-    })[0];
-
-    if (filterResult) {
-      filterResult["deviceName"] = device.driver.deviceName;
-      supportedDevices.push(filterResult);
-    }
-  });
-  console.log(supportedDevices);
-  allSupportedDevicesKeyMappings = {};
-
-  for (const device of supportedDevices) {
-    const mappings = {};
-    allSupportedDevicesKeyMappings[
-      `${device.deviceName}-${device.vid}-${device.pid}`
-    ] = {};
-
-    for (const [index, value] of Object.keys(device.keyMappings).entries()) {
-      const key = value;
-      mappings[key] = device.keyMappings[key].outputKeys.map((char) => ({
-        key: char,
-        keycode: char.charCodeAt(0),
-      }));
-      allSupportedDevicesKeyMappings[
-        `${device.deviceName}-${device.vid}-${device.pid}`
-      ][key] = {
-        label: device.keyMappings[key].label,
-        outputKeys: mappings[key],
-        order: index + 1,
-      };
-    }
-    localStorage.setItem(
-      LOCAL_STORAGE.DEVICES_MAIN_KEY_MAPPINGS,
-      JSON.stringify(allSupportedDevicesKeyMappings)
-    );
-  }
-}
-
 chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   console.log("msg recieved in popup2", message);
   //indicate that something changed and recreate the mapping
@@ -272,6 +167,9 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
 
     case ACTIONS.BROADCAST_CONNECTED_DEVICES_WITH_MAPPINGS_RESPONSE:
       console.log(message.connectedDevices);
+      /**
+       * @type {DevicesKeysMappings}
+       */
       const allSupportedDevicesKeyMappings =
         homeController.loadMappingsFromLocalStorage();
       chrome.runtime.sendMessage({

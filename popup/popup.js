@@ -1,6 +1,6 @@
 import { ACTIONS } from "../constants/actions.js";
-import { LOCAL_STORAGE } from "../constants/local-storage-keys.js";
 import { popupView } from "./popup-view.js";
+import { devicesWithMappingsModel } from "../models/device-mappings-model.js";
 
 export const popupController = (function () {
   /**
@@ -26,11 +26,6 @@ export const popupController = (function () {
    */
 
   /**
-   * @type {DevicesKeysMappings}
-   */
-  let allSupportedDevicesKeyMappings = {};
-
-  /**
    * Send an action to service worker to tell it that the entry of the device is
    *     to take it as raw not converted to the mapping set.
    */
@@ -50,10 +45,12 @@ export const popupController = (function () {
    *     with the new mapping
    */
   const updateMapping = () => {
-    allSupportedDevicesKeyMappings = popupView.retrieveMappingsFromUI();
-    localStorage.setItem(
-      LOCAL_STORAGE.USER_EDITED_DEVICES_KEY_MAPPINGS,
-      JSON.stringify(allSupportedDevicesKeyMappings)
+    /**
+     * @type {DevicesKeysMappings}
+     */
+    const allSupportedDevicesKeyMappings = popupView.retrieveMappingsFromUI();
+    devicesWithMappingsModel.setUserMadeMappings(
+      allSupportedDevicesKeyMappings
     );
     chrome.runtime.sendMessage({
       action: ACTIONS.UPDATE_KEY_MAPPING,
@@ -69,52 +66,7 @@ export const popupController = (function () {
    * @returns {DevicesKeysMappings}
    */
   const loadMappingsFromLocalStorage = () => {
-    allSupportedDevicesKeyMappings = JSON.parse(
-      localStorage.getItem(LOCAL_STORAGE.DEVICES_MAIN_KEY_MAPPINGS)
-    );
-    const userDefinedDevicesKeysMappings = JSON.parse(
-      localStorage.getItem(LOCAL_STORAGE.USER_EDITED_DEVICES_KEY_MAPPINGS)
-    );
-
-    if (userDefinedDevicesKeysMappings) {
-      // To append the newly supported devices.
-      const listOfNewSupportedDevices = [];
-      Object.keys(allSupportedDevicesKeyMappings).forEach((device) => {
-        if (
-          !Object.keys(userDefinedDevicesKeysMappings).some(
-            (oldDevice) => oldDevice == device
-          )
-        ) {
-          listOfNewSupportedDevices.push(device);
-        }
-      });
-
-      listOfNewSupportedDevices.forEach((deviceName) => {
-        userDefinedDevicesKeysMappings[deviceName] =
-          allSupportedDevicesKeyMappings[deviceName];
-      });
-
-      // To remove any dropped devices that were supported.
-      const devicesToRemove = [];
-      Object.keys(userDefinedDevicesKeysMappings).forEach(
-        (oldSupportedDevice) => {
-          if (
-            !Object.keys(allSupportedDevicesKeyMappings).some(
-              (device) => device == oldSupportedDevice
-            )
-          ) {
-            devicesToRemove.push(oldSupportedDevice);
-          }
-        }
-      );
-
-      devicesToRemove.forEach((device) => {
-        delete userDefinedDevicesKeysMappings[device];
-      });
-      allSupportedDevicesKeyMappings = userDefinedDevicesKeysMappings;
-    }
-
-    return allSupportedDevicesKeyMappings;
+    return devicesWithMappingsModel.loadMappings();
   };
 
   /**
@@ -123,7 +75,7 @@ export const popupController = (function () {
    * @returns {DevicesKeysMappings}
    */
   const getAllSupportedDevicesKeyMappings = () => {
-    return allSupportedDevicesKeyMappings;
+    return devicesWithMappingsModel.getDevicesMainKeyMappings();
   };
 
   /**
@@ -134,7 +86,9 @@ export const popupController = (function () {
   const setAllSupportedDevicesKeyMappings = (
     newAllSupportedDevicesKeyMappings
   ) => {
-    allSupportedDevicesKeyMappings = newAllSupportedDevicesKeyMappings;
+    devicesWithMappingsModel.setDevicesMainKeyMappings(
+      newAllSupportedDevicesKeyMappings
+    );
   };
 
   return {
@@ -148,19 +102,23 @@ export const popupController = (function () {
   };
 })();
 
+/**
+ * Sends message to ask for connected devices.
+ */
+const requestConnectedDevices = () => {
+  chrome.runtime.sendMessage({
+    action: ACTIONS.REQUEST_CONNECTED_DEVICES_WITH_MAPPINGS,
+  });
+};
+
 window.addEventListener("load", async () => {
   //bind buttons and request the device name from the background
+  // popupView.connectDeviceButtonOnClick(popupView.connectDeviceSelection);
   document
     .getElementById("connect-device-button")
     .addEventListener("click", popupView.connectDeviceSelection);
   requestConnectedDevices();
 });
-
-async function requestConnectedDevices() {
-  chrome.runtime.sendMessage({
-    action: ACTIONS.REQUEST_CONNECTED_DEVICES_WITH_MAPPINGS,
-  });
-}
 
 //add listeners to msgs
 chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {

@@ -21,13 +21,17 @@ export const popupView = (function () {
     document.getElementById("devices-mappings").innerHTML = "";
   };
 
+  /**
+   * Opens the extension home page when user presses on the connect button
+   *     of the popup view.
+   */
   const connectDeviceSelection = () => {
     //to allow background in an extension to connect and use webHID it needs to ask the user to give access to that device
     //this can only done in a tab for the extension (you can't request it from the normal popup)
     //and it require chrome version 117+
 
     //get chrome version
-    let version = parseInt(
+    const version = parseInt(
       /Chrome\/([0-9.]+)/.exec(navigator.userAgent)[1].match(/\d+/)[0],
       10
     );
@@ -42,6 +46,7 @@ export const popupView = (function () {
         "pls update chrome to use this feature!";
     }
   };
+
   /**
    * Adds new mapping row.
    *
@@ -126,8 +131,14 @@ export const popupView = (function () {
     return newMapping;
   };
 
+  /**
+   * Creates and returns output box that will contain mapping
+   *     of some device's input.
+   *
+   * @returns {HTMLElement}
+   */
   const createOutputField = () => {
-    let outputKey = document.createElement("input");
+    const outputKey = document.createElement("input");
     outputKey.type = "text";
     outputKey.classList.add("output-key");
     outputKey.setAttribute("keycode", "");
@@ -135,7 +146,7 @@ export const popupView = (function () {
       outputKey.value = event.key;
       outputKey.setAttribute(
         "keycode",
-        event.key.match(/^[a-z]$/) ? event.key.charCodeAt(0) : event.keyCode
+        event.key.match(/^[a-z0-9]$/) ? event.key.charCodeAt(0) : event.keyCode
       );
       event.preventDefault();
       popupController.updateMapping();
@@ -143,16 +154,26 @@ export const popupView = (function () {
     return outputKey;
   };
 
-  //create output field and place it inside this
+  /**
+   * Creates and returns output field and place it inside
+   *     the parent node passed.
+   *
+   * @param {HTMLElement} parentDiv
+   *
+   * @returns {HTMLElement}
+   */
   const addOutputField = (parentDiv) => {
-    let outputField = createOutputField();
+    const outputField = createOutputField();
     parentDiv.appendChild(outputField);
     return outputField;
   };
 
-  // delete a key mapping (row)
+  /**
+   * Deletes a key mapping row containing some device's input with its
+   *  corresponding mappings, then calls for updating the mappings.
+   */
   const deleteMapping = (event) => {
-    let parentDiv = event.target.parentNode.parentNode;
+    const parentDiv = event.target.parentNode.parentNode;
     parentDiv.remove();
     popupController.updateMapping();
   };
@@ -173,7 +194,7 @@ export const popupView = (function () {
         deviceMappingsHolderElement.querySelectorAll(".key-mapping");
       const inputKeys = [];
       Array.from(keyMappingList).forEach((parentDiv, index) => {
-        let inputKey = parentDiv.querySelector(".input-key").value;
+        const inputKey = parentDiv.querySelector(".input-key").value;
 
         if (inputKey === "" || inputKeys.includes(inputKey)) {
           parentDiv.querySelector(".input-key").value = "";
@@ -181,7 +202,7 @@ export const popupView = (function () {
           return;
         }
         inputKeys.push(inputKey);
-        let outputFields = parentDiv.querySelectorAll(".output-key");
+        const outputFields = parentDiv.querySelectorAll(".output-key");
         someDeviceKeyMappings[inputKey] = { outputKeys: [], order: index + 1 };
         for (let i = 0; i < outputFields.length; i++) {
           if (outputFields[i].value !== "") {
@@ -194,21 +215,17 @@ export const popupView = (function () {
       });
       allSupportedDevicesMappings[device] = someDeviceKeyMappings;
     }
-    // popupController.setAllSupportedDevicesKeyMappings(
-    //   allSupportedDevicesMappings
-    // );
     return allSupportedDevicesMappings;
   };
 
-  //initial function that will run when the device changes (or when open the popup for the first time)
-  //it load the stored data for that device name to the ui and update keymapping
+  /**
+   * Shows what device is connected and its inputs accompanied
+   *     with their mappings.
+   */
   const createMapping = () => {
     if (popupController.connectedDevices.length > 0) {
       const allSupportedDevicesKeyMappings =
         popupController.loadMappingsFromLocalStorage();
-      popupController.setAllSupportedDevicesKeyMappings(
-        allSupportedDevicesKeyMappings
-      );
 
       if (allSupportedDevicesKeyMappings) {
         const devicesMappingsSpaceElement =
@@ -246,9 +263,9 @@ export const popupView = (function () {
                 ].order ==
                 i + 1
               ) {
-                let mapping = addNewMapping();
+                const mapping = addNewMapping();
                 mapping.querySelector(".input-key").value = deviceInputKey;
-                let outputField = mapping.querySelector(".output-key");
+                const outputField = mapping.querySelector(".output-key");
                 const outputKeys =
                   allSupportedDevicesKeyMappings[deviceNameVIDPIDAsKey][
                     deviceInputKey
@@ -256,7 +273,7 @@ export const popupView = (function () {
                 outputField.value = outputKeys[0].key;
                 outputField.setAttribute("keycode", outputKeys[0].keycode);
                 for (let i = 1; i < outputKeys.length; i++) {
-                  let newOutputField = addOutputField(
+                  const newOutputField = addOutputField(
                     mapping.querySelector(".output-container")
                   );
                   newOutputField.value = outputKeys[i].key;
@@ -273,9 +290,22 @@ export const popupView = (function () {
     }
   };
 
+  /**
+   * Binds the button with a callback function to be executed on click event.
+   *
+   * @param {function(undefined):undefined} callbackFunction Thu function to
+   *     be called when the button is clicked
+   */
+  const connectDeviceButtonOnClick = (callbackFunction) => {
+    document
+      .getElementById("connect-device-button")
+      .addEventListener("click", callbackFunction);
+  };
+
   return {
     clearDevicesMappingsSpace,
     connectDeviceSelection,
+    connectDeviceButtonOnClick,
     createMapping,
     retrieveMappingsFromUI,
     updateConnectedDevicesNamesField,

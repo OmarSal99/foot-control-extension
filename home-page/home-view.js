@@ -90,7 +90,7 @@ export const homeView = (function () {
      * HTMLElement that will contain devices with their mappings
      * @type {HTMLElement}
      */
-    let devicesSpace = document.getElementById("devices-space");
+    const devicesSpace = document.getElementById("devices-space");
 
     while (devicesSpace.firstChild) {
       devicesSpace.removeChild(devicesSpace.firstChild);
@@ -98,7 +98,7 @@ export const homeView = (function () {
 
     if (allsupportedDevicesKeyMappings) {
       // Iterate over every device supported
-      for (let someDeviceKeyMappingsKey of Object.keys(
+      for (const someDeviceKeyMappingsKey of Object.keys(
         allsupportedDevicesKeyMappings
       )) {
         const arrayedDeviceDetails = someDeviceKeyMappingsKey.split("-");
