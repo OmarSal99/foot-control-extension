@@ -12,8 +12,8 @@
     }
   },
   {
-    "pid": 360,
-    "vid": 62345,
+    "pid": 36,
+    "vid": 6234,
     "keyMappings": {
       "whatever": {
         "outputKeys": ["S"]

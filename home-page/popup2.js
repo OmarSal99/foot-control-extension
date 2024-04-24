@@ -38,7 +38,7 @@ export const homeController = (function () {
    */
   function loadMappingsFromLocalStorage() {
     let allSupportedDevicesKeyMappings = JSON.parse(
-      localStorage.getItem(LOCAL_STORAGE.ALL_DEVICES_KEY_MAPPINGS)
+      localStorage.getItem(LOCAL_STORAGE.DEVICES_MAIN_KEY_MAPPINGS)
     );
     /**
      * @type {DevicesKeysMappings}
@@ -48,6 +48,7 @@ export const homeController = (function () {
     );
 
     if (userDefinedDevicesKeysMappings) {
+      // To append the newly supported devices.
       const listOfNewSupportedDevices = [];
       Object.keys(allSupportedDevicesKeyMappings).forEach((device) => {
         if (
@@ -64,6 +65,23 @@ export const homeController = (function () {
           allSupportedDevicesKeyMappings[deviceName];
       });
 
+      // To remove any dropped devices that were supported.
+      const devicesToRemove = [];
+      Object.keys(userDefinedDevicesKeysMappings).forEach(
+        (oldSupportedDevice) => {
+          if (
+            !Object.keys(allSupportedDevicesKeyMappings).some(
+              (device) => device == oldSupportedDevice
+            )
+          ) {
+            devicesToRemove.push(oldSupportedDevice);
+          }
+        }
+      );
+
+      devicesToRemove.forEach((device) => {
+        delete userDefinedDevicesKeysMappings[device];
+      });
       allSupportedDevicesKeyMappings = userDefinedDevicesKeysMappings;
     }
     return allSupportedDevicesKeyMappings;
@@ -238,7 +256,7 @@ function loadMappings() {
       };
     }
     localStorage.setItem(
-      LOCAL_STORAGE.ALL_DEVICES_KEY_MAPPINGS,
+      LOCAL_STORAGE.DEVICES_MAIN_KEY_MAPPINGS,
       JSON.stringify(allSupportedDevicesKeyMappings)
     );
   }

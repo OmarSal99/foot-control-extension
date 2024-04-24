@@ -194,9 +194,9 @@ export const popupView = (function () {
       });
       allSupportedDevicesMappings[device] = someDeviceKeyMappings;
     }
-    popupController.setAllSupportedDevicesKeyMappings(
-      allSupportedDevicesMappings
-    );
+    // popupController.setAllSupportedDevicesKeyMappings(
+    //   allSupportedDevicesMappings
+    // );
     return allSupportedDevicesMappings;
   };
 
@@ -204,9 +204,11 @@ export const popupView = (function () {
   //it load the stored data for that device name to the ui and update keymapping
   const createMapping = () => {
     if (popupController.connectedDevices.length > 0) {
-      popupController.loadMappingsFromLocalStorage();
       const allSupportedDevicesKeyMappings =
-        popupController.getAllSupportedDevicesKeyMappings();
+        popupController.loadMappingsFromLocalStorage();
+      popupController.setAllSupportedDevicesKeyMappings(
+        allSupportedDevicesKeyMappings
+      );
 
       if (allSupportedDevicesKeyMappings) {
         const devicesMappingsSpaceElement =

@@ -43,8 +43,12 @@ export const popupController = (function () {
     }, 100);
   };
 
-  //this run every time user change something in the ui, it distroy the old keymapping and rebuild it based on the ui
-  //a msg indicate that the mapping update is sent with the new mapping
+  /**
+   * Runs every time user changes something in the ui, it destroys the old
+   *     keymapping and rebuild it based on the ui, then sends a msg across
+   *     the ectension to indicate that the mapping update is sent
+   *     with the new mapping
+   */
   const updateMapping = () => {
     allSupportedDevicesKeyMappings = popupView.retrieveMappingsFromUI();
     localStorage.setItem(
@@ -57,15 +61,23 @@ export const popupController = (function () {
     });
   };
 
+  /**
+   * Retrieves device mappings from local storage of both mappings by JSON policy
+   *     file and the overridden mappings by user then returns the mappings by
+   *     the user if found, else it returns mappings of JSON policy file.
+   *
+   * @returns {DevicesKeysMappings}
+   */
   const loadMappingsFromLocalStorage = () => {
     allSupportedDevicesKeyMappings = JSON.parse(
-      localStorage.getItem(LOCAL_STORAGE.ALL_DEVICES_KEY_MAPPINGS)
+      localStorage.getItem(LOCAL_STORAGE.DEVICES_MAIN_KEY_MAPPINGS)
     );
     const userDefinedDevicesKeysMappings = JSON.parse(
       localStorage.getItem(LOCAL_STORAGE.USER_EDITED_DEVICES_KEY_MAPPINGS)
     );
 
     if (userDefinedDevicesKeysMappings) {
+      // To append the newly supported devices.
       const listOfNewSupportedDevices = [];
       Object.keys(allSupportedDevicesKeyMappings).forEach((device) => {
         if (
@@ -82,16 +94,43 @@ export const popupController = (function () {
           allSupportedDevicesKeyMappings[deviceName];
       });
 
+      // To remove any dropped devices that were supported.
+      const devicesToRemove = [];
+      Object.keys(userDefinedDevicesKeysMappings).forEach(
+        (oldSupportedDevice) => {
+          if (
+            !Object.keys(allSupportedDevicesKeyMappings).some(
+              (device) => device == oldSupportedDevice
+            )
+          ) {
+            devicesToRemove.push(oldSupportedDevice);
+          }
+        }
+      );
+
+      devicesToRemove.forEach((device) => {
+        delete userDefinedDevicesKeysMappings[device];
+      });
       allSupportedDevicesKeyMappings = userDefinedDevicesKeysMappings;
     }
 
-    console.log(allSupportedDevicesKeyMappings);
+    return allSupportedDevicesKeyMappings;
   };
 
+  /**
+   * Returns all supported devices with their keymappings.
+   *
+   * @returns {DevicesKeysMappings}
+   */
   const getAllSupportedDevicesKeyMappings = () => {
     return allSupportedDevicesKeyMappings;
   };
 
+  /**
+   * Permits resetting the devices with their keymappings.
+   *
+   * @param {DevicesKeysMappings} newAllSupportedDevicesKeyMappings
+   */
   const setAllSupportedDevicesKeyMappings = (
     newAllSupportedDevicesKeyMappings
   ) => {
@@ -114,10 +153,10 @@ window.addEventListener("load", async () => {
   document
     .getElementById("connect-device-button")
     .addEventListener("click", popupView.connectDeviceSelection);
-  getDeviceName();
+  requestConnectedDevices();
 });
 
-async function getDeviceName() {
+async function requestConnectedDevices() {
   chrome.runtime.sendMessage({
     action: ACTIONS.REQUEST_CONNECTED_DEVICES_WITH_MAPPINGS,
   });
@@ -127,25 +166,27 @@ async function getDeviceName() {
 chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   console.log("msg recieved in popup");
   console.log(message);
-  if (message.action === ACTIONS.INPUT_KEY_PRESSED) {
-    //service worker sends msg that a key pressed (on the device) only if the user is inside input field
-    let focusedInput = document.activeElement;
-    if (focusedInput.classList.contains("input-key")) {
-      focusedInput.value = message.key;
-      updateMapping();
-    }
-    console.log("Input key press deactivated");
-  } else if (
-    message.action ===
-    ACTIONS.BROADCAST_CONNECTED_DEVICES_WITH_MAPPINGS_RESPONSE
-  ) {
-    popupController.connectedDevices = message.connectedDevices;
-    popupView.updateConnectedDevicesNamesField();
-    if (message.connectedDevices?.length <= 0) {
-      console.log("from popup action DEVICE_CHANGED, device name undefined");
-      popupView.clearDevicesMappingsSpace();
-    } else {
-      popupView.createMapping();
-    }
+  switch (message.action) {
+    case ACTIONS.INPUT_KEY_PRESSED:
+      //service worker sends msg that a key pressed (on the device) only if the user is inside input field
+      let focusedInput = document.activeElement;
+
+      if (focusedInput.classList.contains("input-key")) {
+        focusedInput.value = message.key;
+        updateMapping();
+      }
+      console.log("Input key press deactivated");
+      break;
+    case ACTIONS.BROADCAST_CONNECTED_DEVICES_WITH_MAPPINGS_RESPONSE:
+      popupController.connectedDevices = message.connectedDevices;
+      popupView.updateConnectedDevicesNamesField();
+
+      if (message.connectedDevices?.length <= 0) {
+        console.log("from popup action DEVICE_CHANGED, device name undefined");
+        popupView.clearDevicesMappingsSpace();
+      } else {
+        popupView.createMapping();
+      }
+      break;
   }
 });
