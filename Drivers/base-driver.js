@@ -38,7 +38,8 @@ export class BaseDriver {
    * Closes the HID device.
    */
   close = async () => {
-    console.log(this.hidDevice);
-    await this.hidDevice.close();
+    console.log(`${this.hidDevice} has been closed`);
+    // await this.hidDevice.close();
+    await this.hidDevice.forget();
   };
 }

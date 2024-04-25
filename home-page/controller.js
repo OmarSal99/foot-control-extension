@@ -45,6 +45,7 @@ export const homeController = (function () {
    * @param {string} device Holds device's details on this form name-vid-pid
    */
   function disconnectDevice(device) {
+    console.log(`${device} to be disconnected`);
     chrome.runtime.sendMessage({
       action: ACTIONS.DISCONNECT_DEVICE,
       device: device,
