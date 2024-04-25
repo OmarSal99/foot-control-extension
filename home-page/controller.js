@@ -1,5 +1,5 @@
 import { ACTIONS } from "../constants/actions.js";
-import { homeView } from "./home-view.js";
+import { homeView } from "./view.js";
 import { devicesWithMappingsModel } from "../models/device-mappings-model.js";
 
 export const homeController = (function () {

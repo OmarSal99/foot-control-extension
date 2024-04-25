@@ -1,5 +1,5 @@
 import { ACTIONS } from "../constants/actions.js";
-import { popupView } from "./popup-view.js";
+import { popupView } from "./view.js";
 import { devicesWithMappingsModel } from "../models/device-mappings-model.js";
 
 export const popupController = (function () {

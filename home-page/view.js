@@ -1,4 +1,4 @@
-import { homeController } from "./popup2.js";
+import { homeController } from "./controller.js";
 
 export const homeView = (function () {
   /**

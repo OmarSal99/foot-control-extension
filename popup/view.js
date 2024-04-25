@@ -1,4 +1,4 @@
-import { popupController } from "./popup.js";
+import { popupController } from "./controller.js";
 
 export const popupView = (function () {
   /**
@@ -38,7 +38,7 @@ export const popupView = (function () {
     //if chrome version is 117+ it will open popup2 so the user can select the device
     if (typeof version === "number" && version >= 117) {
       chrome.tabs.create({
-        url: chrome.runtime.getURL("../home-page/popup2.html"),
+        url: chrome.runtime.getURL("../home-page/home.html"),
       });
     } else {
       //inform the user that chrome need to be updated
