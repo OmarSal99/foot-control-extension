@@ -113,20 +113,22 @@ navigator.hid.addEventListener("disconnect", ({ device }) => {
  * @param {string} key The key/char to be made as keydown event.
  * @returns {Promise<undefined>}
  */
-function sendCommand(tabs, key) {
+function sendCommand(tabs, key, keycode) {
   return new Promise((resolve, reject) => {
     chrome.debugger.attach({ tabId: tabs[0].id }, "1.0", async function () {
       await new Promise((resolve, reject) => {
-        console.log(`Key typed is: ${key}`);
+        console.log(`Key typed is: ${keycode}`);
         chrome.debugger.sendCommand(
           { tabId: tabs[0].id },
           "Input.dispatchKeyEvent",
           {
             type: "keyDown",
-            windowsVirtualKeyCode: key,
-            nativeVirtualKeyCode: key,
-            macCharCode: key,
-            text: String.fromCharCode(key),
+            windowsVirtualKeyCode: keycode,
+            nativeVirtualKeyCode: keycode,
+            macCharCode: keycode,
+            text: key,
+            key: key,
+            code: key,
           },
           () => {
             resolve();
@@ -273,7 +275,10 @@ const handleKeyInput = async (deviceName, vendorId, productId, key) => {
           typeof outputKeys[i].key === "number"
             ? outputKeys[i].key + ""
             : outputKeys[i].key;
+        console.log(key);
         const keycode = parseInt(outputKeys[i].keycode, 10);
+        console.log(keycode);
+        console.log(String.fromCharCode(keycode));
         const myId = idCounter++;
         const process = async (key, keycode, myId) => {
           //to send ouput key to dom we are using a debugger that will send that key to the browser (chrome)
@@ -307,7 +312,7 @@ const handleKeyInput = async (deviceName, vendorId, productId, key) => {
           //this will pop the current id from the top of the queue so the next process id is in top now
           debuggerQueue.shift();
           if (key.length === 1) {
-            promise = sendCommand(tabs, keycode);
+            promise = sendCommand(tabs, key, keycode);
           } else {
             switch (key) {
               case "F5":
@@ -343,6 +348,7 @@ const handleKeyInput = async (deviceName, vendorId, productId, key) => {
           }
           sendingOutput = promise;
           await promise;
+
           //release the lock after promise is finished
           isLocked = false;
         };
