@@ -40,7 +40,7 @@ export class FootPedalDriver extends BaseDriver {
    *     as a key
    */
   setEntryHandler = (callbackFunction) => {
-    this.hidDevice.addEventListener("inputreport", (event) => {
+    this.hidDevice.oninputreport = (event) => {
       const { data, device, reportId } = event;
       let uint8Array = new Uint8Array(data.buffer);
       const deviceInput = uint8Array[0];
@@ -53,6 +53,6 @@ export class FootPedalDriver extends BaseDriver {
           this.deviceEntries[deviceInput]
         );
       }
-    });
+    };
   };
 }
