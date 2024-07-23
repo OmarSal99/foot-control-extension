@@ -1,12 +1,23 @@
+body {
+  font-family: "Cairo", sans-serif;
+  font-optical-sizing: auto;
+  font-style: normal;
+  font-variation-settings: "slnt" 0;
+  height: fit-content;
+  min-width: 400px;
+  display: flex;
+  flex-direction: column;
+  padding: 0 15;
+}
+
 button {
-  background-color: #007bff;
+  background-color: #3F5AA9;
   color: white;
   border: none;
-  border-radius: 5px;
+  border-radius: 18px;
   padding: 0.65rem;
   cursor: pointer;
   transition: background-color 0.2s ease;
-  align-self: flex-end;
   text-align: center;
   width: fit-content;
   white-space: nowrap;
@@ -22,19 +33,9 @@ button:disabled {
   box-shadow: none;
 }
 
-body {
-  height: fit-content;
-  min-width: 400px;
-  display: flex;
-  flex-direction: column;
-  padding: 0 15;
-}
-
 header {
   display: flex;
   gap: 15px;
-  border-bottom: 2px wheat solid;
-  padding: 0 0 5px 0;
   margin-bottom: 5px;
   align-items: center;
 }

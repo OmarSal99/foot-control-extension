@@ -41,7 +41,7 @@ export const popupController = (function () {
   /**
    * Runs every time user changes something in the ui, it destroys the old
    *     keymapping and rebuild it based on the ui, then sends a msg across
-   *     the ectension to indicate that the mapping update is sent
+   *     the extension to indicate that the mapping update is sent
    *     with the new mapping
    */
   const updateMapping = () => {
@@ -133,6 +133,7 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
       console.log("Input key press deactivated");
       break;
     case ACTIONS.BROADCAST_CONNECTED_DEVICES_WITH_MAPPINGS_RESPONSE:
+      console.log("message omaar", message);
       popupController.connectedDevices = message.connectedDevices;
       popupView.updateConnectedDevicesNamesField();
 

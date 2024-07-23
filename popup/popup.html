@@ -1,19 +1,21 @@
 <html>
   <head>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cairo:wght@200..1000&family=Rubik:ital,wght@0,300..900;1,300..900&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <header>
-      <img
-        src="../extension-logo.png"
-        alt="Ext Img"
-        style="width: 50px; height: 50px"
-      />
-      <h2>Foot pedal extension</h2>
+      <h2>Input mapper status</h2>
+      <img src="./../assets/no_issue_status.svg" alt="no_issue" />
     </header>
     <h3 id="device-name"></h3>
     <div id="devices-mappings"></div>
-    <button id="connect-device-button">Connect device</button>
+    <button id="connect-device-button">Manage device mappings</button>
     <script type="module" src="controller.js"></script>
   </body>
 </html>

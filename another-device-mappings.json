@@ -1,30 +1,42 @@
 [
   {
-    "pid": 21313,
-    "vid": 1008,
-    "keyMappings": {
-      "f39/f39PAMA=": {
-        "outputKeys": ["c", "h", "r", "o", "m", "e"]
-      },
-      "f39/f3+PAMA=": { "outputKeys": [" "] },
-      "f39/f38fAMA=": { "outputKeys": ["o", "s"] },
-      "hi": { "outputKeys": ["h", ""] }
-    }
-  },
-  {
-    "pid": 36,
-    "vid": 6234,
-    "keyMappings": {
-      "whatever": {
-        "outputKeys": ["S"]
-      },
-      "what1": { "outputKeys": ["D"] },
-      "f39/f38fAMA=": { "outputKeys": ["A"] }
-    }
-  },
-  {
+    "name": "Foot pedal",
     "pid": 2330,
     "vid": 2321,
-    "keyMappings": {}
+    "modifiable": true,
+    "mappings": [
+      {
+        "input": "1",
+        "output": ["o"]
+      },
+      {
+        "input": "2",
+        "output": ["3", " "]
+      },
+      {
+        "input": "6",
+        "output": ["x", "e"]
+      }
+    ]
+  },
+  {
+    "name": "Gamepad",
+    "pid": 6,
+    "vid": 121,
+    "modifiable": false,
+    "mappings": [
+      {
+        "input": "f",
+        "output": ["c", "b", "o"]
+      },
+      {
+        "input": "fr3",
+        "output": ["c", "s"]
+      },
+      {
+        "input": "re4",
+        "output": ["F5", " b"]
+      }
+    ]
   }
 ]

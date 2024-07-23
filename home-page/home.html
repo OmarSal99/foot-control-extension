@@ -2,30 +2,34 @@
 <html>
   <head>
     <title></title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cairo:wght@200..1000&family=Rubik:ital,wght@0,300..900;1,300..900&display=swap"
+      rel="stylesheet"
+    />
+
     <link rel="stylesheet" href="style.css" />
     <link rel="icon" type="image/x-icon" href="../extension-logo.png" />
   </head>
   <body>
-    <header>
-      <img
-        src="../extension-logo.png"
-        alt="Ext Img"
-        style="width: 50px; height: 50px"
-      />
-      <h2>Foot pedal extension</h2>
-    </header>
-    <div class="row-elements-on-sides">
-      <h2 id="device-name" style="word-wrap: break-word; max-width: 300px"></h2>
-      <div class="label-value-pair">
-        <label for="">Device input tester: </label>
-        <input type="text" id="device-input-field" />
-        <button id="test-mode-button" disabled>Switch to test mode</button>
+    <header class="row-elements-on-sides">
+      <h2>Input mapper extension</h2>
+      <div class="header-buttons-container">
+        <button class="button-secondary">
+          Download JSON file for admin console configuration
+        </button>
+        <button id="connect-device-button" class="button-with-icon">
+          <img src="../assets/plus_icon.svg" alt="" />Register new device
+        </button>
       </div>
-      <button id="connect-device-button">Connect a device</button>
-    </div>
-    <script type="module" src="controller.js"></script>
+    </header>
+    <p class="description">
+      Input mapper allows you to change the button assignments for external
+      devices. This enables the use of foot pedals, game pads, and other HID
+      devices in the application of your choice.
+    </p>
     <div id="devices-space"></div>
-
-    <button id="test-input-button">Test input of gamepad</button>
+    <script type="module" src="controller.js"></script>
   </body>
 </html>

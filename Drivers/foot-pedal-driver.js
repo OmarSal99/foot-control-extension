@@ -44,13 +44,15 @@ export class FootPedalDriver extends BaseDriver {
       const { data, device, reportId } = event;
       let uint8Array = new Uint8Array(data.buffer);
       const deviceInput = uint8Array[0];
+      console.log(deviceInput);
       // The following strings within the condition represent neutral entries by the device
       if (deviceInput !== 0) {
         callbackFunction(
           this.deviceName,
           this.vendorId,
           this.productId,
-          this.deviceEntries[deviceInput]
+          // this.deviceEntries[deviceInput]
+          deviceInput
         );
       }
     };

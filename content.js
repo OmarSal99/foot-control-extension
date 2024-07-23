@@ -12,30 +12,81 @@ const LAST_CONNECTED_DEVICE_LOCAL_STORAGE_KEY = "last connnected HID device";
 // recieve messages from other parts of the code
 chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   console.log(message);
-  if (message.action === ACTIONS.REFRESH_PAGE) {
-    location.reload();
-  } else if (message.action === ACTIONS.TAB) {
-    const currentFocusedElement = document.activeElement;
-    const allInputFields = document.querySelectorAll('input[type="text"]');
-    const currentIndex = Array.from(allInputFields).indexOf(
-      currentFocusedElement
-    );
+  const key = message.data.key;
+  // if (message.action === ACTIONS.REFRESH_PAGE) {
+  //   location.reload();
+  // } else if (message.action === ACTIONS.TAB) {
+  //   const currentFocusedElement = document.activeElement;
+  //   const allInputFields = document.querySelectorAll('input[type="text"]');
+  //   const currentIndex = Array.from(allInputFields).indexOf(
+  //     currentFocusedElement
+  //   );
 
-    // Move focus to the next input field
-    const nextIndex = (currentIndex + 1) % allInputFields.length;
-    allInputFields[nextIndex].focus();
-  } else if (message.action === ACTIONS.FULL_SCREEN) {
-    if (document.fullscreenElement) {
-      if (document.exitFullscreen) {
-        document.exitFullscreen();
-      }
-    } else {
-      const element = document.documentElement;
-      if (element.requestFullscreen) {
-        element.requestFullscreen();
-      }
-    }
-  }
+  //   // Move focus to the next input field
+  //   const nextIndex = (currentIndex + 1) % allInputFields.length;
+  //   allInputFields[nextIndex].focus();
+  // } else if (message.action === ACTIONS.FULL_SCREEN) {
+  //   if (document.fullscreenElement) {
+  //     if (document.exitFullscreen) {
+  //       document.exitFullscreen();
+  //     }
+  //   } else {
+  //     const element = document.documentElement;
+  //     if (element.requestFullscreen) {
+  //       element.requestFullscreen();
+  //     }
+  //   }
+  // }
+  // const event = new KeyboardEvent("keydown", {
+  //   key: message.data.key, // The key value of the key represented by the event
+  //   code: "Key" + message.data.key.toUpperCase(),
+  //   charCode: message.data.key.charCodeAt(0),
+  //   keyCode: message.data.key.charCodeAt(0),
+  //   bubbles: true,
+  // });
+  const keyCode = message.data.keycode;
+
+  // Create and dispatch 'keydown' event for the key
+  let event = new KeyboardEvent("keydown", {
+    key: key,
+    code: key,
+    keyCode: keyCode,
+    charCode: keyCode,
+    which: keyCode,
+    bubbles: true,
+    cancelable: true,
+  });
+  document.activeElement.dispatchEvent(event);
+
+  // Create and dispatch 'keypress' event for the key
+  event = new KeyboardEvent("keypress", {
+    key: key,
+    code: keyCode,
+    keyCode: keyCode,
+    charCode: keyCode,
+    which: keyCode,
+    bubbles: true,
+    cancelable: true,
+  });
+  document.activeElement.dispatchEvent(event);
+
+  // Create and dispatch 'keyup' event for the key
+  event = new KeyboardEvent("keyup", {
+    key: key,
+    code: keyCode,
+    keyCode: keyCode,
+    charCode: keyCode,
+    which: keyCode,
+    bubbles: true,
+    cancelable: true,
+  });
+  document.activeElement.dispatchEvent(event);
+  if (key.length == 1 || key == " ") document.activeElement.value += key;
+  console.log(event);
+  console.log(document.activeElement);
+  // document.activeElement.dispatchEvent(event);
+  // document.activeElement.dispatchEvent(event2);
+  // document.activeElement.value += message.data.key;
 });
 
 //this interval should try to make the service-worker awake

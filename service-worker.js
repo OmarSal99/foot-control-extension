@@ -1,5 +1,17 @@
 import { ACTIONS } from "./constants/actions.js";
 import { DEVICES_LIST } from "./constants/devices-list.js";
+
+chrome.runtime.onStartup.addListener(async () => {
+  const devicesWithPermissions = await navigator.hid.getDevices();
+  console.log(devicesWithPermissions);
+  devicesWithPermissions.forEach(async (device) => {
+    if (device.opened) {
+      return;
+    }
+    connectDevice(device.productId, device.vendorId);
+  });
+});
+
 /**
  * @typedef {Object} CharKeyCodePair
  * @property {string} key Single character string representing the key.
@@ -79,6 +91,7 @@ let deviceInputMode = "normal";
  *     the device disconnection, and makes notification to notify the user.
  */
 navigator.hid.addEventListener("disconnect", ({ device }) => {
+  console.log(device);
   // check if the disconnected device is one of the devices that were connected
   const disconnectedDevice = connectedDevices.find(
     (connectedDevice) =>
@@ -95,15 +108,18 @@ navigator.hid.addEventListener("disconnect", ({ device }) => {
       action: ACTIONS.BROADCAST_CONNECTED_DEVICES_WITH_MAPPINGS_RESPONSE,
       connectedDevices: connectedDevices,
     });
-    chrome.notifications.create("", {
-      title: `${disconnectedDevice.deviceName} disconnected`,
-      message: `${disconnectedDevice.deviceName} device with VID: ${disconnectedDevice.vendorId} and PID: ${disconnectedDevice.productId} has been disconnected.`,
-      type: "basic",
-      iconUrl: "./extension-logo.png",
-    });
+    // chrome.notifications.create("", {
+    //   title: `${disconnectedDevice.deviceName} disconnected`,
+    //   message: `${disconnectedDevice.deviceName} device with VID: ${disconnectedDevice.vendorId} and PID: ${disconnectedDevice.productId} has been disconnected.`,
+    //   type: "basic",
+    //   iconUrl: "./extension-logo.png",
+    // });
   }
 });
 
+navigator.hid.addEventListener("connect", (event) => {
+  console.log("connectconnect");
+});
 // send command and return a promise, the promise is resolved when sending command is done to do clean up
 /**
  * Responsible for making keydown event with the key passed to it using
@@ -114,32 +130,38 @@ navigator.hid.addEventListener("disconnect", ({ device }) => {
  * @returns {Promise<undefined>}
  */
 function sendCommand(tabs, key, keycode) {
-  return new Promise((resolve, reject) => {
-    chrome.debugger.attach({ tabId: tabs[0].id }, "1.0", async function () {
-      await new Promise((resolve, reject) => {
-        console.log(`Key typed is: ${keycode}`);
-        chrome.debugger.sendCommand(
-          { tabId: tabs[0].id },
-          "Input.dispatchKeyEvent",
-          {
-            type: "keyDown",
-            windowsVirtualKeyCode: keycode,
-            nativeVirtualKeyCode: keycode,
-            macCharCode: keycode,
-            text: key,
-            key: key,
-            code: key,
-          },
-          () => {
-            resolve();
-          }
-        );
-      });
-      chrome.debugger.detach({ tabId: tabs[0].id }, () => {
-        resolve();
-      });
-    });
+  // return new Promise((resolve, reject) => {
+  // chrome.debugger.attach({ tabId: tabs[0].id }, "1.0", async function () {
+  //   await new Promise((resolve, reject) => {
+  //     console.log(`Key typed is: ${keycode}`);
+  //     chrome.debugger.sendCommand(
+  //       { tabId: tabs[0].id },
+  //       "Input.dispatchKeyEvent",
+  //       {
+  //         type: "keyDown",
+  //         windowsVirtualKeyCode: keycode,
+  //         nativeVirtualKeyCode: keycode,
+  //         macCharCode: keycode,
+  //         text: key,
+  //         key: key,
+  //         code: key,
+  //       },
+  //       () => {
+  //         resolve();
+  //       }
+  //     );
+  //   });
+  //   chrome.debugger.detach({ tabId: tabs[0].id }, () => {
+
+  //   });
+  // });
+  console.log(tabs);
+  chrome.tabs.sendMessage(tabs[0].id, {
+    action: "keydown",
+    data: { key, keycode },
   });
+  //   resolve();
+  // });
 }
 
 chrome.runtime.onMessage.addListener(async function (
@@ -215,10 +237,6 @@ chrome.runtime.onMessage.addListener(async function (
       });
       break;
 
-    case ACTIONS.TEST_INPUT_SIMULATION:
-      handleKeyInput("Gamepad", 1008, 21313, "f39/f39PAMA=");
-      break;
-
     default:
       break;
   }
@@ -248,16 +266,23 @@ const handleKeyInput = async (deviceName, vendorId, productId, key) => {
     return;
   }
   let outputKeys = undefined;
+  console.log("key", key);
+  console.log(
+    "keyekekekekke",
+    keyMapping[`${deviceName}-${vendorId}-${productId}`].mappings[key]
+  );
+  outputKeys =
+    keyMapping[`${deviceName}-${vendorId}-${productId}`].mappings[key]
+      ?.outputKeys;
+  // if (deviceInputMode === "normal") {
 
-  if (deviceInputMode === "normal") {
-    outputKeys =
-      keyMapping[`${deviceName}-${vendorId}-${productId}`][key]?.outputKeys;
-  } else if (deviceInputMode === "test") {
-    outputKeys = [];
-    for (const character of key) {
-      outputKeys.push({ key: character, keycode: character.charCodeAt(0) });
-    }
-  }
+  // } else if (deviceInputMode === "test") {
+  //   outputKeys = [];
+  //   for (const character of key) {
+  //     outputKeys.push({ key: character, keycode: character.charCodeAt(0) });
+  //   }
+  // }
+  console.log("outouototuout", outputKeys);
   // let outputKeys = keyMapping[key];
   console.log("Input from connected device");
   console.log(key);
@@ -276,7 +301,8 @@ const handleKeyInput = async (deviceName, vendorId, productId, key) => {
             ? outputKeys[i].key + ""
             : outputKeys[i].key;
         console.log(key);
-        const keycode = parseInt(outputKeys[i].keycode, 10);
+        // const keycode = parseInt(outputKeys[i].keycode, 10);
+        const keycode = outputKeys[i].keycode;
         console.log(keycode);
         console.log(String.fromCharCode(keycode));
         const myId = idCounter++;
@@ -311,41 +337,42 @@ const handleKeyInput = async (deviceName, vendorId, productId, key) => {
           isLocked = true;
           //this will pop the current id from the top of the queue so the next process id is in top now
           debuggerQueue.shift();
-          if (key.length === 1) {
-            promise = sendCommand(tabs, key, keycode);
-          } else {
-            switch (key) {
-              case "F5":
-                console.log("refresh page !");
-                promise = new Promise((resolve, reject) => {
-                  chrome.tabs.sendMessage(tabs[0].id, {
-                    action: ACTIONS.REFRESH_PAGE,
-                  });
-                  resolve();
-                });
-                break;
-              case "Tab":
-                console.log("tab pressed !");
-                promise = new Promise((resolve, reject) => {
-                  chrome.tabs.sendMessage(tabs[0].id, {
-                    action: ACTIONS.TAB,
-                  });
-                  resolve();
-                });
-                break;
-              case "F11":
-                console.log("fullscreen toggle");
-                promise = new Promise((resolve, reject) => {
-                  chrome.tabs.sendMessage(tabs[0].id, {
-                    action: ACTIONS.FULL_SCREEN,
-                  });
-                  resolve();
-                });
-                break;
-              default:
-                break;
-            }
-          }
+          // if (key.length === 1) {
+          console.log(tabs[0]);
+          promise = sendCommand(tabs, key, keycode);
+          // } else {
+          //   switch (key) {
+          //     case "F5":
+          //       console.log("refresh page !");
+          //       promise = new Promise((resolve, reject) => {
+          //         chrome.tabs.sendMessage(tabs[0].id, {
+          //           action: ACTIONS.REFRESH_PAGE,
+          //         });
+          //         resolve();
+          //       });
+          //       break;
+          //     case "Tab":
+          //       console.log("tab pressed !");
+          //       promise = new Promise((resolve, reject) => {
+          //         chrome.tabs.sendMessage(tabs[0].id, {
+          //           action: ACTIONS.TAB,
+          //         });
+          //         resolve();
+          //       });
+          //       break;
+          //     case "F11":
+          //       console.log("fullscreen toggle");
+          //       promise = new Promise((resolve, reject) => {
+          //         chrome.tabs.sendMessage(tabs[0].id, {
+          //           action: ACTIONS.FULL_SCREEN,
+          //         });
+          //         resolve();
+          //       });
+          //       break;
+          //     default:
+          //       break;
+          //   }
+          // }
           sendingOutput = promise;
           await promise;
 
@@ -386,24 +413,24 @@ async function connectDevice(productId, vendorId) {
     await device.driver.open();
     device.driver.setEntryHandler(handleKeyInput);
   } catch (error) {
-    chrome.notifications.create("", {
-      title: "Connection Failure",
-      message:
-        "HID device couldn't be opened, check device access permissions.",
-      type: "basic",
-      iconUrl: "./extension-logo.png",
-    });
+    // chrome.notifications.create("", {
+    //   title: "Connection Failure",
+    //   message:
+    //     "HID device couldn't be opened, check device access permissions.",
+    //   type: "basic",
+    //   iconUrl: "./extension-logo.png",
+    // });
     console.log(error);
     return;
   }
 
   deviceName = device.driver.deviceName;
-  chrome.notifications.create("", {
-    title: "Connection Succeeded",
-    message: `${deviceName} with VID: ${vendorId} and PID: ${productId} has been successfully connected.`,
-    type: "basic",
-    iconUrl: "./extension-logo.png",
-  });
+  // chrome.notifications.create("", {
+  //   title: "Connection Succeeded",
+  //   message: `${deviceName} with VID: ${vendorId} and PID: ${productId} has been successfully connected.`,
+  //   type: "basic",
+  //   iconUrl: "./extension-logo.png",
+  // });
 
   deviceDetails = { pid: productId, vid: vendorId };
   connectedDevices.push({
@@ -451,12 +478,12 @@ function isDevicePermittedToConnect(productId, vendorId) {
   }
 
   if (device === undefined) {
-    chrome.notifications.create("", {
-      title: "Connection Failure",
-      message: "Device not supported.",
-      type: "basic",
-      iconUrl: "./extension-logo.png",
-    });
+    // chrome.notifications.create("", {
+    //   title: "Connection Failure",
+    //   message: "Device not supported.",
+    //   type: "basic",
+    //   iconUrl: "./extension-logo.png",
+    // });
     console.log("unable to find device in the devices-list");
     return false;
   }
@@ -473,13 +500,13 @@ function isDevicePermittedToConnect(productId, vendorId) {
   });
 
   if (!isDeviceSupportedByAdmin) {
-    chrome.notifications.create("", {
-      title: "Connection Failure",
-      message:
-        "Device not supported by admin.\nContact your admin to grant support.",
-      type: "basic",
-      iconUrl: "./extension-logo.png",
-    });
+    // chrome.notifications.create("", {
+    //   title: "Connection Failure",
+    //   message:
+    //     "Device not supported by admin.\nContact your admin to grant support.",
+    //   type: "basic",
+    //   iconUrl: "./extension-logo.png",
+    // });
     console.log("unable to find device in the devices-list");
     return false;
   }
@@ -490,12 +517,12 @@ function isDevicePermittedToConnect(productId, vendorId) {
       (device) => device.productId === productId && device.vendorId === vendorId
     )
   ) {
-    chrome.notifications.create("", {
-      title: "Already connected",
-      message: "Device you're trying to connect to is already connected.",
-      type: "basic",
-      iconUrl: "./extension-logo.png",
-    });
+    // chrome.notifications.create("", {
+    //   title: "Already connected",
+    //   message: "Device you're trying to connect to is already connected.",
+    //   type: "basic",
+    //   iconUrl: "./extension-logo.png",
+    // });
     console.log("unable to find device in the devices-list");
     return false;
   }

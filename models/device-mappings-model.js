@@ -1,6 +1,6 @@
 import { DEVICES_LIST } from "../constants/devices-list.js";
 import { LOCAL_STORAGE } from "../constants/local-storage-keys.js";
-import devicesMappings from "../another-device-mappings.json" assert { type: "json" };
+import devicesMappings from "../another-device-mappings.json" with { type: "json" };
 
 export const devicesWithMappingsModel = (function () {
   /**
@@ -120,6 +120,7 @@ export const devicesWithMappingsModel = (function () {
       allSupportedDevicesKeyMappings = userDefinedDevicesKeysMappings;
     }
     setDevicesMainKeyMappings(allSupportedDevicesKeyMappings);
+    console.log("sssssssssssssss", allSupportedDevicesKeyMappings)
     return allSupportedDevicesKeyMappings;
   };
 
@@ -130,6 +131,10 @@ export const devicesWithMappingsModel = (function () {
    *     the extension's support for the mentioned devices.
    */
   const loadMappingsFromPolicyFile = () => {
+    // let policyDevices = [];
+    // chrome.storage.managed.get((data) => {
+    //   policyDevices = data.devices;
+    // });
     const supportedDevices = [];
     // to find what devices are supported are also listed in the JSON config file
     DEVICES_LIST.forEach((device) => {
@@ -141,7 +146,6 @@ export const devicesWithMappingsModel = (function () {
       })[0];
 
       if (filterResult) {
-        filterResult["deviceName"] = device.driver.deviceName;
         supportedDevices.push(filterResult);
       }
     });
@@ -150,29 +154,29 @@ export const devicesWithMappingsModel = (function () {
     /**
      * @type {DevicesKeysMappings}
      */
-    const allSupportedDevicesKeyMappings = {};
+    const allSupportedDevicesKeyMappings =   {};
 
     for (const device of supportedDevices) {
       const mappings = {};
       allSupportedDevicesKeyMappings[
-        `${device.deviceName}-${device.vid}-${device.pid}`
-      ] = {};
-
-      for (const [index, value] of Object.keys(device.keyMappings).entries()) {
-        const key = value;
-        mappings[key] = device.keyMappings[key].outputKeys.map((char) => ({
+        `${device.name}-${device.vid}-${device.pid}`
+      ] = {modifiable: device.modifiable, mappings: {}};
+      
+      let index = 0;
+      for (const mapping of device.mappings) {
+        mappings[mapping.input] = mapping.output.map((char) => ({
           key: char,
           keycode: char.charCodeAt(0),
         }));
         allSupportedDevicesKeyMappings[
-          `${device.deviceName}-${device.vid}-${device.pid}`
-        ][key] = {
-          label: device.keyMappings[key].label,
-          outputKeys: mappings[key],
+          `${device.name}-${device.vid}-${device.pid}`
+        ].mappings[mapping.input] = {
+          outputKeys: mappings[mapping.input],
           order: index + 1,
         };
+        index++;
       }
-
+      console.log("omaromaraor", allSupportedDevicesKeyMappings)
       // Store the loaded mappings as the devices main mappings in local storage
       setDevicesMainKeyMappings(allSupportedDevicesKeyMappings);
     }

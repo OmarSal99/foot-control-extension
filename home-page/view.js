@@ -8,14 +8,14 @@ export const homeView = (function () {
    *     connected devices, when undefined the field will convey that no device
    *     is connected.
    */
-  const updateDevicesConnectedLabel = (devicesConnected) => {
-    const devicesNameLabel = document.getElementById("device-name");
-    if (devicesConnected) {
-      devicesNameLabel.textContent = `Devices connected: ${devicesConnected}`;
-    } else {
-      devicesNameLabel.textContent = `No device connected`;
-    }
-  };
+  // const updateDevicesConnectedLabel = (devicesConnected) => {
+  //   const devicesNameLabel = document.getElementById("device-name");
+  //   if (devicesConnected) {
+  //     devicesNameLabel.textContent = `Devices connected: ${devicesConnected}`;
+  //   } else {
+  //     devicesNameLabel.textContent = `No device connected`;
+  //   }
+  // };
 
   /**
    * Provides control over devices' diconnect buttons to enable/disable them.
@@ -55,34 +55,202 @@ export const homeView = (function () {
   /**
    * Provides for functionality of enabling and disabling the test mode button
    */
-  const testModeButton = {
-    /**
-     * Enables the test mode button
-     *
-     * @inner
-     * @function
-     */
-    enable: () => {
-      document.getElementById("test-mode-button").removeAttribute("disabled");
-    },
+  // const testModeButton = {
+  //   /**
+  //    * Enables the test mode button
+  //    *
+  //    * @inner
+  //    * @function
+  //    */
+  //   enable: () => {
+  //     document.getElementById("test-mode-button").removeAttribute("disabled");
+  //   },
 
-    /**
-     * Disables the test mode button
-     *
-     * @inner
-     * @function
-     */
-    disable: () => {
-      document
-        .getElementById("test-mode-button")
-        .setAttribute("disabled", true);
-    },
+  //   /**
+  //    * Disables the test mode button
+  //    *
+  //    * @inner
+  //    * @function
+  //    */
+  //   disable: () => {
+  //     document
+  //       .getElementById("test-mode-button")
+  //       .setAttribute("disabled", true);
+  //   },
+  // };
+  const deleteInput = (inputDiv) => {
+    if (inputDiv.previousElementSibling.className === "separator")
+      inputDiv.previousElementSibling.remove();
+    inputDiv.remove();
+    homeController.updateMapping();
+  };
+
+  const deleteOutput = (outputEl) => {
+    outputEl.remove();
+    homeController.updateMapping();
+  };
+
+  const createOutput = async (value, isDisabled) => {
+    const outputKeyContainer = document.createElement("div");
+    outputKeyContainer.classList.add("output-key-container");
+    const outputKeyElement = document.createElement("input");
+    outputKeyElement.type = "text";
+    outputKeyElement.value = value;
+    outputKeyElement.disabled = isDisabled;
+    outputKeyElement.classList.add("output-key");
+    outputKeyElement.onkeydown = (event) => {
+      outputKeyElement.value = event.key;
+      outputKeyElement.setAttribute(
+        "keycode",
+        event.key.match(/^[a-z0-9]$/) ? event.key.charCodeAt(0) : event.keyCode
+      );
+      event.preventDefault();
+      homeController.updateMapping();
+    };
+    outputKeyContainer.appendChild(outputKeyElement);
+    const deleteOutputButton = await loadSVG("./../assets/delete.svg");
+    deleteOutputButton.classList.add("delete-button");
+    if (isDisabled) deleteOutputButton.classList.add("svg-disabled");
+
+    deleteOutputButton.addEventListener("click", () => {
+      deleteOutput(outputKeyContainer);
+    });
+    outputKeyContainer.appendChild(deleteOutputButton);
+    return outputKeyContainer;
+  };
+
+  const createKeyMapping = async (
+    mappingDiv,
+    keyMappingObj,
+    deviceInputKeyToShow,
+    isNewMapping,
+    modifiable
+  ) => {
+    console.log("keyobj", keyMappingObj);
+    if (isNewMapping) {
+      const separator = document.createElement("div");
+      separator.classList.add("separator");
+      mappingDiv.appendChild(separator);
+    }
+
+    const keyMapping = document.createElement("div");
+    keyMapping.classList.add("key-mapping");
+
+    const inputContainer = document.createElement("div");
+    inputContainer.classList.add("input-container");
+
+    const inputKeyLabel = document.createElement("label");
+    inputKeyLabel.innerHTML = "Input";
+    inputKeyLabel.classList.add("input-key-label");
+
+    const inputElement = document.createElement("input");
+    inputElement.type = "text";
+    inputElement.classList.add("input-key");
+    inputElement.onkeyup = (event) => {
+      homeController.updateMapping();
+    };
+    inputElement.addEventListener("focus", function () {
+      homeController.setInputInterval();
+    });
+    inputElement.addEventListener("blur", function () {
+      homeController.clearInputInterval();
+    });
+
+    inputElement.disabled = isNewMapping ? false : modifiable ? false : true;
+    // Extract device's input based on order
+
+    console.log("deviceInputKeyToShow", deviceInputKeyToShow);
+    inputElement.value = isNewMapping ? "" : deviceInputKeyToShow;
+
+    const outputKeyLabel = document.createElement("label");
+    outputKeyLabel.innerHTML = "Output";
+    outputKeyLabel.classList.add("output-key-label");
+
+    inputContainer.appendChild(inputKeyLabel);
+    inputContainer.appendChild(inputElement);
+    keyMapping.appendChild(inputContainer);
+
+    const outputContainer = document.createElement("div");
+    outputContainer.classList.add("output-container");
+    outputContainer.appendChild(outputKeyLabel);
+
+    // console.log(allsupportedDevicesKeyMappings[someDeviceKeyMappingsKey]);
+    // console.log(deviceInputKeyToShow);
+
+    // Iterate over the mappings of the extracted device's input
+    //     in order to show them
+    if (!isNewMapping) {
+      for (
+        let j = 0;
+        j < keyMappingObj[deviceInputKeyToShow].outputKeys.length;
+        j++
+      ) {
+        let newOutput = await createOutput(
+          keyMappingObj[deviceInputKeyToShow].outputKeys[j]["key"],
+          !modifiable
+        );
+        // const outputKeyContainer = document.createElement("div");
+        // outputKeyContainer.classList.add("output-key-container");
+        // const outputKeyElement = document.createElement("input");
+        // outputKeyElement.type = "text";
+        // outputKeyElement.value =
+        //   keyMappingObj[deviceInputKeyToShow].outputKeys[j]["key"];
+        // outputKeyElement.disabled = true;
+        // outputKeyElement.classList.add("output-key");
+        // outputKeyContainer.appendChild(outputKeyElement);
+
+        // const deleteOutputButton = await loadSVG("./../assets/delete.svg");
+        // deleteOutputButton.classList.add("delete-button");
+
+        // outputKeyContainer.appendChild(deleteOutputButton);
+        outputContainer.appendChild(newOutput);
+      }
+    } else {
+      let newOutput = await createOutput("", !modifiable);
+      // const outputKeyContainer = document.createElement("div");
+      // outputKeyContainer.classList.add("output-key-container");
+      // const outputKeyElement = document.createElement("input");
+      // outputKeyElement.type = "text";
+      // outputKeyElement.value = "";
+      // outputKeyElement.disabled = false;
+      // outputKeyElement.classList.add("output-key");
+      // outputKeyContainer.appendChild(outputKeyElement);
+
+      // const deleteOutputButton = await loadSVG("./../assets/delete.svg");
+      // deleteOutputButton.classList.add("delete-button");
+
+      // outputKeyContainer.appendChild(deleteOutputButton);
+      outputContainer.appendChild(newOutput);
+    }
+
+    const addOutputButton = await loadSVG("./../assets/add_icon.svg");
+    addOutputButton.classList.add("add-button");
+    if (!modifiable) addOutputButton.classList.add("svg-disabled");
+
+    outputContainer.appendChild(addOutputButton);
+    addOutputButton.addEventListener("click", async () => {
+      if (!modifiable) return;
+      let newOutput = await createOutput("", false);
+      outputContainer.insertBefore(newOutput, addOutputButton);
+      newOutput.firstChild.focus();
+    });
+    keyMapping.appendChild(outputContainer);
+    const deleteInputButton = await loadSVG("./../assets/delete.svg");
+
+    deleteInputButton.classList.add("delete-button", "delete-input-button");
+    if (!modifiable) deleteInputButton.classList.add("svg-disabled");
+
+    // deleteInputButton.setAttribute("disabled", true);
+    deleteInputButton.addEventListener("click", () => deleteInput(keyMapping));
+    keyMapping.appendChild(deleteInputButton);
+    mappingDiv.appendChild(keyMapping);
+    isNewMapping && inputElement.focus();
   };
 
   /**
    * Loads all mappings for all devices from local storage and shows them
    */
-  const showMappings = () => {
+  const showMappings = async () => {
     const allsupportedDevicesKeyMappings =
       homeController.loadMappingsFromLocalStorage();
 
@@ -101,6 +269,8 @@ export const homeView = (function () {
       for (const someDeviceKeyMappingsKey of Object.keys(
         allsupportedDevicesKeyMappings
       )) {
+        const modifiable =
+          allsupportedDevicesKeyMappings[someDeviceKeyMappingsKey].modifiable;
         const arrayedDeviceDetails = someDeviceKeyMappingsKey.split("-");
         const deviceDetails = {
           name: arrayedDeviceDetails[0],
@@ -119,114 +289,116 @@ export const homeView = (function () {
           "id",
           `${someDeviceKeyMappingsKey}-disconnect-button`
         );
+        disconnectButton.classList.add("button-with-icon", "button-danger");
+        const deleteIcon = await loadSVG("./../assets/delete.svg");
+        deleteIcon.children.item(0).classList.add("secondary-button-icon");
+        disconnectButton.innerHTML = "Remove device";
+        disconnectButton.prepend(deleteIcon);
         // Check if the device is connected or not in order to set the disabled
         //     attribute of the disconnect button for the device
-        homeController
-          .getConnectedDevices()
-          .some(
-            (connectedDevice) =>
-              connectedDevice.deviceName == deviceDetails.name &&
-              connectedDevice.productId == deviceDetails.productId &&
-              connectedDevice.vendorId == deviceDetails.vendorId
-          )
-          ? undefined
-          : disconnectButton.setAttribute("disabled", true);
-        disconnectButton.innerHTML = "Disconnect";
-        disconnectButton.setAttribute("style", "margin-right: 15px");
+        // homeController
+        //   .getConnectedDevices()
+        //   .some(
+        //     (connectedDevice) =>
+        //       connectedDevice.deviceName == deviceDetails.name &&
+        //       connectedDevice.productId == deviceDetails.productId &&
+        //       connectedDevice.vendorId == deviceDetails.vendorId
+        //   )
+        //   ? undefined
+        //   : disconnectButton.setAttribute("disabled", true);
+        // disconnectButton.innerHTML = "Remove device";
         disconnectButton.addEventListener("click", () => {
-          homeController.disconnectDevice(someDeviceKeyMappingsKey);
-          disconnectButton.setAttribute("disabled", true);
+          // homeController.disconnectDevice(someDeviceKeyMappingsKey);
+          // disconnectButton.setAttribute("disabled", true);
         });
+        disconnectButton.disabled = !modifiable;
+        const nameContainer = document.createElement("div");
+        nameContainer.classList.add("name-container");
+        const deviceLogo = new Image();
+        deviceLogo.src = "./../assets/keyboard.svg";
+        deviceLogo.alt = deviceDetails.name;
+        nameContainer.appendChild(deviceLogo);
 
         const nameElement = document.createElement("h2");
-        nameElement.innerHTML = `Device name: ${deviceDetails.name}`;
+        nameElement.innerHTML = `${deviceDetails.name}`;
+        nameContainer.appendChild(nameElement);
 
-        const vid = document.createElement("label");
-        vid.innerHTML = `Vendor id:  ${deviceDetails.vendorId}`;
+        const buttonsContainer = document.createElement("div");
+        buttonsContainer.classList.add("header-buttons-container");
+        const addInputButton = document.createElement("button");
+        addInputButton.setAttribute(
+          "id",
+          `${someDeviceKeyMappingsKey}-add-input-button`
+        );
+        addInputButton.classList.add("button-with-icon", "button-secondary");
+        addInputButton.addEventListener("click", () => {
+          if (!modifiable) return;
+          createKeyMapping(
+            mappingDiv,
+            allsupportedDevicesKeyMappings[someDeviceKeyMappingsKey].mappings,
+            someDeviceKeyMappingsKey,
+            true,
+            true
+          );
+        });
 
-        const pid = document.createElement("label");
-        pid.innerHTML = `Product id:  ${deviceDetails.productId}`;
+        const plusIcon = await loadSVG("./../assets/plus_icon.svg");
+        plusIcon.children.item(0).classList.add("secondary-button-icon");
+        addInputButton.innerHTML = "Add input";
+        addInputButton.prepend(plusIcon);
+        addInputButton.disabled = !modifiable;
+        buttonsContainer.appendChild(addInputButton);
+        buttonsContainer.appendChild(disconnectButton);
 
-        deviceDivHeader.appendChild(nameElement);
-        deviceDivHeader.appendChild(disconnectButton);
+        deviceDivHeader.appendChild(nameContainer);
+        deviceDivHeader.appendChild(buttonsContainer);
         mappingDiv.appendChild(deviceDivHeader);
-        mappingDiv.appendChild(vid);
-        mappingDiv.appendChild(pid);
+        if (!modifiable) {
+          const notification = document.createElement("p");
+          notification.innerHTML =
+            "This device is managed by your organization. You cannot modify this configuration.";
+          notification.classList.add("device-notification");
+          mappingDiv.appendChild(notification);
+        }
 
-        const keyMappingsWrapper = document.createElement("div");
-        keyMappingsWrapper.style.marginTop = "10px";
+        // mappingDiv.appendChild(vid);
+        // mappingDiv.appendChild(pid);
 
         // Iterate over every device's keymappings on order to show them
         //     on UI
         for (
           let i = 0;
           i <
-          Object.keys(allsupportedDevicesKeyMappings[someDeviceKeyMappingsKey])
-            .length;
+          Object.keys(
+            allsupportedDevicesKeyMappings[someDeviceKeyMappingsKey].mappings
+          ).length;
           i++
         ) {
-          const keyMapping = document.createElement("div");
-          keyMapping.classList.add("key-mapping");
-
-          const inputKeyLabel = document.createElement("label");
-          inputKeyLabel.innerHTML = "Key:";
-          inputKeyLabel.classList.add("input-key-label");
-
-          const inputElement = document.createElement("input");
-          inputElement.type = "text";
-          inputElement.classList.add("input-key");
-          inputElement.disabled = true;
-          // Extract device's input based on order
-          const deviceInputKeyToShow = Object.keys(
-            allsupportedDevicesKeyMappings[someDeviceKeyMappingsKey]
-          ).filter(
-            (deviceInputKey) =>
-              allsupportedDevicesKeyMappings[someDeviceKeyMappingsKey][
-                deviceInputKey
-              ].order ==
-              i + 1
+          const keyMappingObj =
+            allsupportedDevicesKeyMappings[someDeviceKeyMappingsKey].mappings;
+          const deviceInputKeyToShow = Object.keys(keyMappingObj).filter(
+            (deviceInputKey) => keyMappingObj[deviceInputKey].order == i + 1
           )[0];
-          inputElement.value = deviceInputKeyToShow;
-
-          const outputKeyLabel = document.createElement("label");
-          outputKeyLabel.innerHTML = "Mapping:";
-          outputKeyLabel.classList.add("output-key-label");
-
-          keyMapping.appendChild(inputKeyLabel);
-          keyMapping.appendChild(inputElement);
-          keyMapping.appendChild(outputKeyLabel);
-
-          const outputContainer = document.createElement("div");
-          outputContainer.classList.add("output-container");
-          console.log(allsupportedDevicesKeyMappings[someDeviceKeyMappingsKey]);
-          console.log(deviceInputKeyToShow);
-
-          // Iterate over the mappings of the extracted device's input
-          //     in order to show them
-          for (
-            let j = 0;
-            j <
-            allsupportedDevicesKeyMappings[someDeviceKeyMappingsKey][
-              deviceInputKeyToShow
-            ].outputKeys.length;
-            j++
+          await createKeyMapping(
+            mappingDiv,
+            keyMappingObj,
+            deviceInputKeyToShow,
+            false,
+            modifiable
+          );
+          if (
+            i <
+            Object.keys(
+              allsupportedDevicesKeyMappings[someDeviceKeyMappingsKey].mappings
+            ).length -
+              1
           ) {
-            const outputKeyElement = document.createElement("input");
-            outputKeyElement.type = "text";
-            outputKeyElement.value =
-              allsupportedDevicesKeyMappings[someDeviceKeyMappingsKey][
-                deviceInputKeyToShow
-              ].outputKeys[j]["key"];
-            outputKeyElement.disabled = true;
-            outputKeyElement.classList.add("output-key");
-            outputContainer.appendChild(outputKeyElement);
+            const separator = document.createElement("div");
+            separator.classList.add("separator");
+            mappingDiv.appendChild(separator);
           }
-          keyMapping.appendChild(outputContainer);
-          keyMappingsWrapper.append(keyMapping);
-          mappingDiv.appendChild(keyMapping);
+          devicesSpace.appendChild(mappingDiv);
         }
-        mappingDiv.appendChild(keyMappingsWrapper);
-        devicesSpace.appendChild(mappingDiv);
       }
     }
   };
@@ -237,31 +409,31 @@ export const homeView = (function () {
    * @param {function(undefined):undefined} callbackFunction Thu function to
    *     be called when the button is clicked
    */
-  const deviceInputModeButtonOnClick = (callbackFunction) => {
-    document
-      .getElementById("test-mode-button")
-      .addEventListener("click", callbackFunction);
-  };
+  // const deviceInputModeButtonOnClick = (callbackFunction) => {
+  //   document
+  //     .getElementById("test-mode-button")
+  //     .addEventListener("click", callbackFunction);
+  // };
 
   /**
    * Changes the device input mode button text content.
    */
-  const deviceInputModeButtonTextContent = {
-    /**
-     * Sets the text content to "Switch to test mode"
-     */
-    switchToTestMode: () => {
-      document.getElementById("test-mode-button").textContent =
-        "Switch to test mode";
-    },
-    /**
-     * Sets the text content to "Switch to normal mode"
-     */
-    switchToNormalMode: () => {
-      document.getElementById("test-mode-button").textContent =
-        "Switch to normal mode";
-    },
-  };
+  // const deviceInputModeButtonTextContent = {
+  //   /**
+  //    * Sets the text content to "Switch to test mode"
+  //    */
+  //   switchToTestMode: () => {
+  //     document.getElementById("test-mode-button").textContent =
+  //       "Switch to test mode";
+  //   },
+  //   /**
+  //    * Sets the text content to "Switch to normal mode"
+  //    */
+  //   switchToNormalMode: () => {
+  //     document.getElementById("test-mode-button").textContent =
+  //       "Switch to normal mode";
+  //   },
+  // };
 
   /**
    * Binds the connect device button click event with the passed function.
@@ -281,20 +453,79 @@ export const homeView = (function () {
    * @param {function(undefined): undefined} callbackFunction The function to
    *     be executed when the button is clicked
    */
-  const testInputButtonOnClick = (callbackFunction) => {
-    document
-      .getElementById("test-input-button")
-      .addEventListener("click", callbackFunction);
+  // const testInputButtonOnClick = (callbackFunction) => {
+  //   document
+  //     .getElementById("test-input-button")
+  //     .addEventListener("click", callbackFunction);
+  // };
+
+  /**
+   * Updates the devices mappings by checking scanning the UI of the pop up
+   *
+   * @returns {DevicesKeysMappings}
+   */
+  const retrieveMappingsFromUI = () => {
+    const allSupportedDevicesMappings =
+      homeController.getAllSupportedDevicesKeyMappings();
+    for (const connectedDevice of homeController.getConnectedDevices()) {
+      const someDeviceKeyMappings = {};
+      const device = `${connectedDevice.deviceName}-${connectedDevice.vendorId}-${connectedDevice.productId}`;
+      const deviceMappingsHolderElement = document.getElementById(device);
+      const keyMappingList =
+        deviceMappingsHolderElement.querySelectorAll(".key-mapping");
+      const inputKeys = [];
+      Array.from(keyMappingList).forEach((parentDiv, index) => {
+        const inputKey = parentDiv.querySelector(".input-key").value;
+
+        if (inputKey === "" || inputKeys.includes(inputKey)) {
+          parentDiv.querySelector(".input-key").value = "";
+          parentDiv.remove();
+          return;
+        }
+        inputKeys.push(inputKey);
+        const outputFields = parentDiv.querySelectorAll(".output-key");
+        someDeviceKeyMappings[inputKey] = { outputKeys: [], order: index + 1 };
+        for (let i = 0; i < outputFields.length; i++) {
+          if (outputFields[i].value !== "") {
+            someDeviceKeyMappings[inputKey].outputKeys.push({
+              key: outputFields[i].value,
+              keycode: outputFields[i].getAttribute("keycode"),
+            });
+          }
+        }
+      });
+      allSupportedDevicesMappings[device].mappings = someDeviceKeyMappings;
+      console.log("updatedddd", allSupportedDevicesMappings);
+    }
+    return allSupportedDevicesMappings;
   };
 
   return {
     connectDeviceButtonOnClick,
     deviceDisconnectButton,
-    deviceInputModeButtonOnClick,
-    deviceInputModeButtonTextContent,
+    retrieveMappingsFromUI,
+    // deviceInputModeButtonOnClick,
+    // deviceInputModeButtonTextContent,
     showMappings,
-    testInputButtonOnClick,
-    testModeButton,
-    updateDevicesConnectedLabel,
+    // testInputButtonOnClick,
+    // testModeButton,
+    // updateDevicesConnectedLabel,
   };
 })();
+
+async function loadSVG(file) {
+  try {
+    const response = await fetch(file);
+    const svgText = await response.text();
+
+    const parser = new DOMParser();
+    const svgDoc = parser.parseFromString(svgText, "image/svg+xml");
+    const svgElement = svgDoc.documentElement;
+
+    // svgElement.setAttribute("fill", fillColor);
+
+    return svgElement;
+  } catch (error) {
+    console.error("Error loading SVG:", error);
+  }
+}

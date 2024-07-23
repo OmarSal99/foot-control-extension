@@ -43,7 +43,7 @@ export const popupView = (function () {
     } else {
       //inform the user that chrome need to be updated
       document.getElementById("device-name").innerHTML =
-        "pls update chrome to use this feature!";
+        "please update chrome to use this feature!";
     }
   };
 

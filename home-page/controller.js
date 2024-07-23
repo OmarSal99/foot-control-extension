@@ -7,7 +7,7 @@ export const homeController = (function () {
    * @type Array<{deviceName: string, vendorId: number, productId: number}>
    */
   let connectedDevices = [];
-
+  let inputIntervalId = null;
   /**
    * Returns the list of connected devices.
    *
@@ -15,6 +15,25 @@ export const homeController = (function () {
    */
   const getConnectedDevices = () => {
     return connectedDevices;
+  };
+
+  /**
+   * Send an action to service worker to tell it that the entry of the device is
+   *     to take it as raw not converted to the mapping set.
+   */
+  const setInputInterval = () => {
+    if (inputIntervalId !== null) clearInterval(inputIntervalId);
+    inputIntervalId = setInterval(() => {
+      console.log("herhehere");
+      chrome.runtime.sendMessage({
+        action: ACTIONS.POPUP_IN_INPUT_FIELD,
+      });
+    }, 100);
+  };
+
+  const clearInputInterval = () => {
+    clearInterval(inputIntervalId);
+    inputIntervalId = null;
   };
 
   /**
@@ -52,11 +71,60 @@ export const homeController = (function () {
     });
   }
 
+  /**
+   * Runs every time user changes something in the ui, it destroys the old
+   *     keymapping and rebuild it based on the ui, then sends a msg across
+   *     the extension to indicate that the mapping update is sent
+   *     with the new mapping
+   */
+  const updateMapping = () => {
+    /**
+     * @type {DevicesKeysMappings}
+     */
+    const allSupportedDevicesKeyMappings = homeView.retrieveMappingsFromUI();
+    devicesWithMappingsModel.setUserMadeMappings(
+      allSupportedDevicesKeyMappings
+    );
+    console.log("update", allSupportedDevicesKeyMappings);
+
+    chrome.runtime.sendMessage({
+      action: ACTIONS.UPDATE_KEY_MAPPING,
+      keyMapping: allSupportedDevicesKeyMappings,
+    });
+  };
+
+  /**
+   * Returns all supported devices with their keymappings.
+   *
+   * @returns {DevicesKeysMappings}
+   */
+  const getAllSupportedDevicesKeyMappings = () => {
+    return devicesWithMappingsModel.getDevicesMainKeyMappings();
+  };
+
+  /**
+   * Permits resetting the devices with their keymappings.
+   *
+   * @param {DevicesKeysMappings} newAllSupportedDevicesKeyMappings
+   */
+  const setAllSupportedDevicesKeyMappings = (
+    newAllSupportedDevicesKeyMappings
+  ) => {
+    devicesWithMappingsModel.setDevicesMainKeyMappings(
+      newAllSupportedDevicesKeyMappings
+    );
+  };
+
   return {
     disconnectDevice,
     getConnectedDevices,
     loadMappingsFromLocalStorage,
     setConnectedDevices,
+    updateMapping,
+    getAllSupportedDevicesKeyMappings,
+    setAllSupportedDevicesKeyMappings,
+    clearInputInterval,
+    setInputInterval,
   };
 })();
 
@@ -106,49 +174,26 @@ const connectDeviceAttempt = async () => {
       });
     })
     .catch((error) => {
-      chrome.notifications.create("", {
-        title: "Connection Failure",
-        message: "Couldn't connect to device, check permissions.",
-        type: "basic",
-        iconUrl: "./extension-logo.png",
-      });
+      // chrome.notifications.create("", {
+      //   title: "Connection Failure",
+      //   message: "Couldn't connect to device, check permissions.",
+      //   type: "basic",
+      //   iconUrl: "./extension-logo.png",
+      // });
       console.error("Error connecting to HID device:", error);
     });
 };
 
 document.addEventListener("DOMContentLoaded", function () {
+  chrome.identity.getProfileUserInfo(function (userInfo) {
+    console.log(userInfo);
+  });
+  chrome.storage.managed.get(function (items) {
+    console.log("Managed items:", items);
+  });
   devicesWithMappingsModel.loadMappingsFromPolicyFile();
   //requst a device from webHID when button is pressed
   homeView.connectDeviceButtonOnClick(connectDeviceAttempt);
-
-  let inputMode = "normal";
-  // To preset the input mode as normal
-  chrome.runtime.sendMessage({
-    action: ACTIONS.DEVICE_INPUT_MODE_CHANGED,
-    mode: inputMode,
-  });
-
-  homeView.deviceInputModeButtonOnClick(() => {
-    if (inputMode === "normal") {
-      inputMode = "test";
-      homeView.deviceInputModeButtonTextContent.switchToNormalMode();
-      chrome.runtime.sendMessage({
-        action: ACTIONS.DEVICE_INPUT_MODE_CHANGED,
-        mode: inputMode,
-      });
-    } else if (inputMode === "test") {
-      inputMode = "normal";
-      homeView.deviceInputModeButtonTextContent.switchToTestMode();
-      chrome.runtime.sendMessage({
-        action: ACTIONS.DEVICE_INPUT_MODE_CHANGED,
-        mode: inputMode,
-      });
-    }
-  });
-
-  homeView.testInputButtonOnClick(() => {
-    chrome.runtime.sendMessage({ action: ACTIONS.TEST_INPUT_SIMULATION });
-  });
 });
 
 window.addEventListener("load", async () => {
@@ -162,6 +207,17 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   console.log("msg recieved in popup2", message);
   //indicate that something changed and recreate the mapping
   switch (message.action) {
+    case ACTIONS.INPUT_KEY_PRESSED:
+      //service worker sends msg that a key pressed (on the device) only if the user is inside input field
+      let focusedInput = document.activeElement;
+
+      if (focusedInput.classList.contains("input-key")) {
+        focusedInput.value = message.key;
+        updateMapping();
+      }
+      console.log("Input key press deactivated");
+      break;
+
     case ACTIONS.UPDATE_KEY_MAPPING:
       homeView.showMappings();
       break;
@@ -200,11 +256,9 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
             const fullDeviceName = `${connectedDevice.deviceName}-${connectedDevice.vendorId}-${connectedDevice.productId}`;
             homeView.deviceDisconnectButton.enable(fullDeviceName);
           });
-        homeView.updateDevicesConnectedLabel(connectedDevicesNames);
-        homeView.testModeButton.enable();
+        // homeView.updateDevicesConnectedLabel(connectedDevicesNames);
       } else {
-        homeView.updateDevicesConnectedLabel();
-        homeView.testModeButton.disable();
+        // homeView.updateDevicesConnectedLabel();
       }
       break;
   }

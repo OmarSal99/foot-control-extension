@@ -1,0 +1,29 @@
+{
+  "type": "object",
+  "properties": {
+    "devices": {
+      "type": "array",
+      "id": "listOfDevices",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "pid": { "type": "integer" },
+          "vid": { "type": "integer" },
+          "modifiable": { "type": "boolean" },
+          "mapping": {
+            "type": "array",
+            "id": "listOfItems",
+            "items": {
+              "type": "object",
+              "properties": {
+                "input": { "type": "string" },
+                "output": { "type": "array", "items": { "type": "string" } }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
