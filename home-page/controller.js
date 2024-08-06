@@ -51,10 +51,11 @@ export const homeController = (function () {
    *     file and the overridden mappings by user then returns the mappings by
    *     the user if found, else it returns mappings of JSON policy file.
    *
-   * @returns {DevicesKeysMappings}
+   * @returns {Promise<DevicesKeysMappings>}
    */
-  function loadMappingsFromLocalStorage() {
-    return devicesWithMappingsModel.loadMappings();
+  async function loadMappingsFromLocalStorage() {
+    const mappings = await devicesWithMappingsModel.loadMappings();
+    return mappings;
   }
 
   /**
@@ -77,12 +78,13 @@ export const homeController = (function () {
    *     the extension to indicate that the mapping update is sent
    *     with the new mapping
    */
-  const updateMapping = () => {
+  const updateMapping = async () => {
     /**
      * @type {DevicesKeysMappings}
      */
-    const allSupportedDevicesKeyMappings = homeView.retrieveMappingsFromUI();
-    devicesWithMappingsModel.setUserMadeMappings(
+    const allSupportedDevicesKeyMappings =
+      await homeView.retrieveMappingsFromUI();
+    await devicesWithMappingsModel.setUserMadeMappings(
       allSupportedDevicesKeyMappings
     );
     console.log("update", allSupportedDevicesKeyMappings);
@@ -98,8 +100,9 @@ export const homeController = (function () {
    *
    * @returns {DevicesKeysMappings}
    */
-  const getAllSupportedDevicesKeyMappings = () => {
-    return devicesWithMappingsModel.getDevicesMainKeyMappings();
+  const getAllSupportedDevicesKeyMappings = async () => {
+    const mappings = await devicesWithMappingsModel.getDevicesMainKeyMappings();
+    return mappings;
   };
 
   /**
@@ -107,10 +110,8 @@ export const homeController = (function () {
    *
    * @param {DevicesKeysMappings} newAllSupportedDevicesKeyMappings
    */
-  const setAllSupportedDevicesKeyMappings = (
-    newAllSupportedDevicesKeyMappings
-  ) => {
-    devicesWithMappingsModel.setDevicesMainKeyMappings(
+  const setUserMadeKeyMappings = async (newAllSupportedDevicesKeyMappings) => {
+    await devicesWithMappingsModel.setUserMadeMappings(
       newAllSupportedDevicesKeyMappings
     );
   };
@@ -122,7 +123,7 @@ export const homeController = (function () {
     setConnectedDevices,
     updateMapping,
     getAllSupportedDevicesKeyMappings,
-    setAllSupportedDevicesKeyMappings,
+    setUserMadeKeyMappings,
     clearInputInterval,
     setInputInterval,
   };
@@ -157,7 +158,7 @@ const connectDeviceAttempt = async () => {
     .then(async (devices) => {
       //after selecting a device send msg to inform background worker of that
       if (devices[0] === undefined) {
-        console.log("popup2 device choosing has been canceled 2lmafrood");
+        console.log("device choosing has been canceled");
         return;
       }
       const device = devices[0];
@@ -184,26 +185,61 @@ const connectDeviceAttempt = async () => {
     });
 };
 
-document.addEventListener("DOMContentLoaded", function () {
-  chrome.identity.getProfileUserInfo(function (userInfo) {
-    console.log(userInfo);
-  });
-  chrome.storage.managed.get(function (items) {
-    console.log("Managed items:", items);
-  });
-  devicesWithMappingsModel.loadMappingsFromPolicyFile();
+const downloadJSONConfiguration = async () => {
+  const devicesKeyMappings =
+    await homeController.loadMappingsFromLocalStorage();
+  console.log(devicesKeyMappings);
+  const adminConfigurationObject = { devices: { Value: [] } };
+  for (const deviceKey of Object.keys(devicesKeyMappings)) {
+    let deviceObj = {};
+    let [deviceName, vid, pid] = deviceKey.split("-");
+    deviceObj.name = deviceName;
+    deviceObj.vid = +vid;
+    deviceObj.pid = +pid;
+    deviceObj.modifiable = devicesKeyMappings[deviceKey].modifiable;
+    let mapping = [];
+    for (const inputKey of Object.keys(
+      devicesKeyMappings[deviceKey].mappings
+    )) {
+      let mappingObj = {};
+      mappingObj.input = inputKey;
+      mappingObj.output = devicesKeyMappings[deviceKey].mappings[
+        inputKey
+      ].outputKeys.map((outputKey) => outputKey.key);
+      mapping.push(mappingObj);
+    }
+    deviceObj.mapping = mapping;
+    adminConfigurationObject.devices.Value.push(deviceObj);
+  }
+  const jsonString = JSON.stringify(adminConfigurationObject);
+  console.log(jsonString);
+  const blob = new Blob([jsonString], { type: "application/json" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `admin-policy-configuration-${Date.now()}.json`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
+document.addEventListener("DOMContentLoaded", async () => {
+  await devicesWithMappingsModel.loadMappingsFromPolicyFile();
   //requst a device from webHID when button is pressed
   homeView.connectDeviceButtonOnClick(connectDeviceAttempt);
-});
-
-window.addEventListener("load", async () => {
+  homeView.downloadJSONButtonOnClick(downloadJSONConfiguration);
   homeView.showMappings();
   chrome.runtime.sendMessage({
     action: ACTIONS.REQUEST_CONNECTED_DEVICES_WITH_MAPPINGS,
   });
 });
 
-chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
+// window.addEventListener("load", async () => {});
+
+chrome.runtime.onMessage.addListener(async function (
+  message,
+  sender,
+  sendResponse
+) {
   console.log("msg recieved in popup2", message);
   //indicate that something changed and recreate the mapping
   switch (message.action) {
@@ -213,7 +249,7 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
 
       if (focusedInput.classList.contains("input-key")) {
         focusedInput.value = message.key;
-        updateMapping();
+        homeController.updateMapping();
       }
       console.log("Input key press deactivated");
       break;
@@ -228,7 +264,7 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
        * @type {DevicesKeysMappings}
        */
       const allSupportedDevicesKeyMappings =
-        homeController.loadMappingsFromLocalStorage();
+        await homeController.loadMappingsFromLocalStorage();
       chrome.runtime.sendMessage({
         action: ACTIONS.UPDATE_KEY_MAPPING,
         keyMapping: allSupportedDevicesKeyMappings,
@@ -237,12 +273,14 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
         (connectedDevice) =>
           `${connectedDevice.deviceName}-${connectedDevice.vendorId}-${connectedDevice.productId}`
       );
-      Object.keys(allSupportedDevicesKeyMappings).forEach((supportedDevice) => {
-        if (!connectedDevicesNames.includes(supportedDevice)) {
-          homeView.deviceDisconnectButton.disable(supportedDevice);
-        }
-      });
+
+      // Object.keys(allSupportedDevicesKeyMappings).forEach((supportedDevice) => {
+      //   if (!connectedDevicesNames.includes(supportedDevice)) {
+      //     homeView.deviceDisconnectButton.disable(supportedDevice);
+      //   }
+      // });
       homeController.setConnectedDevices(message.connectedDevices);
+      console.log("connected", homeController.getConnectedDevices());
 
       if (message.connectedDevices?.length > 0) {
         // Make the combination of connected devices names as one string
@@ -260,6 +298,19 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
       } else {
         // homeView.updateDevicesConnectedLabel();
       }
+      break;
+    case ACTIONS.APPEND_NEW_DEVICE_MAPPINGS:
+      const { deviceName, vendorId, productId } = message.deviceDetails;
+      const allDevicesKeyMappings =
+        await homeController.loadMappingsFromLocalStorage();
+      allDevicesKeyMappings[`${deviceName}-${vendorId}-${productId}`] = {
+        modifiable: true,
+        mappings: {},
+      };
+      await devicesWithMappingsModel.setUserMadeMappings(
+        allDevicesKeyMappings
+      );
+      homeView.showMappings();
       break;
   }
 });

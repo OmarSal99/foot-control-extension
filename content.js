@@ -4,6 +4,35 @@ const ACTIONS = {
   FULL_SCREEN: "full screen",
 };
 
+const KEY_CODES_MAP = {
+  Tab: "Tab",
+  Enter: "Enter",
+  F1: "F1",
+  F2: "F2",
+  F3: "F3",
+  F4: "F4",
+  F5: "F5",
+  F6: "F6",
+  F7: "F7",
+  F8: "F8",
+  F9: "F9",
+  F10: "F10",
+  F11: "F11",
+  F12: "F12",
+};
+
+const getKeyCode = (key) => {
+  let code = "";
+  switch (key.length) {
+    case 1:
+      if (/^\d$/.test(str)) {
+        code = `Digit${key}`;
+      }
+      break
+    default:
+  }
+};
+
 const LAST_CONNECTED_DEVICE_LOCAL_STORAGE_KEY = "last connnected HID device";
 
 // Will try to see if there's some device saved in local storage in order to
@@ -44,7 +73,7 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   //   keyCode: message.data.key.charCodeAt(0),
   //   bubbles: true,
   // });
-  const keyCode = message.data.keycode;
+  const keyCode = +message.data.keycode;
 
   // Create and dispatch 'keydown' event for the key
   let event = new KeyboardEvent("keydown", {
@@ -59,9 +88,21 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   document.activeElement.dispatchEvent(event);
 
   // Create and dispatch 'keypress' event for the key
-  event = new KeyboardEvent("keypress", {
+  // event = new KeyboardEvent("keypress", {
+  //   key: key,
+  //   code: key,
+  //   keyCode: keyCode,
+  //   charCode: keyCode,
+  //   which: keyCode,
+  //   bubbles: true,
+  //   cancelable: true,
+  // });
+  // document.activeElement.dispatchEvent(event);
+
+  // Create and dispatch 'keyup' event for the key
+  event = new KeyboardEvent("keyup", {
     key: key,
-    code: keyCode,
+    code: key,
     keyCode: keyCode,
     charCode: keyCode,
     which: keyCode,
@@ -70,17 +111,6 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   });
   document.activeElement.dispatchEvent(event);
 
-  // Create and dispatch 'keyup' event for the key
-  event = new KeyboardEvent("keyup", {
-    key: key,
-    code: keyCode,
-    keyCode: keyCode,
-    charCode: keyCode,
-    which: keyCode,
-    bubbles: true,
-    cancelable: true,
-  });
-  document.activeElement.dispatchEvent(event);
   if (key.length == 1 || key == " ") document.activeElement.value += key;
   console.log(event);
   console.log(document.activeElement);

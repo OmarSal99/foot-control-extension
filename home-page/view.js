@@ -1,3 +1,4 @@
+import { loadSVG } from "../utils.js";
 import { homeController } from "./controller.js";
 
 export const homeView = (function () {
@@ -99,6 +100,7 @@ export const homeView = (function () {
     outputKeyElement.disabled = isDisabled;
     outputKeyElement.classList.add("output-key");
     outputKeyElement.onkeydown = (event) => {
+      console.log("lll", event);
       outputKeyElement.value = event.key;
       outputKeyElement.setAttribute(
         "keycode",
@@ -127,7 +129,7 @@ export const homeView = (function () {
     modifiable
   ) => {
     console.log("keyobj", keyMappingObj);
-    if (isNewMapping) {
+    if (isNewMapping && Object.keys(keyMappingObj).length > 0) {
       const separator = document.createElement("div");
       separator.classList.add("separator");
       mappingDiv.appendChild(separator);
@@ -147,6 +149,7 @@ export const homeView = (function () {
     inputElement.type = "text";
     inputElement.classList.add("input-key");
     inputElement.onkeyup = (event) => {
+      console.log("immmmmkeyup");
       homeController.updateMapping();
     };
     inputElement.addEventListener("focus", function () {
@@ -252,8 +255,8 @@ export const homeView = (function () {
    */
   const showMappings = async () => {
     const allsupportedDevicesKeyMappings =
-      homeController.loadMappingsFromLocalStorage();
-
+      await homeController.loadMappingsFromLocalStorage();
+    console.log("show new dev", allsupportedDevicesKeyMappings);
     /**
      * HTMLElement that will contain devices with their mappings
      * @type {HTMLElement}
@@ -284,16 +287,16 @@ export const homeView = (function () {
         const deviceDivHeader = document.createElement("div");
         deviceDivHeader.setAttribute("class", "row-elements-on-sides");
 
-        const disconnectButton = document.createElement("button");
-        disconnectButton.setAttribute(
+        const removeDeviceButton = document.createElement("button");
+        removeDeviceButton.setAttribute(
           "id",
-          `${someDeviceKeyMappingsKey}-disconnect-button`
+          `${someDeviceKeyMappingsKey}-remove-device-button`
         );
-        disconnectButton.classList.add("button-with-icon", "button-danger");
+        removeDeviceButton.classList.add("button-with-icon", "button-danger");
         const deleteIcon = await loadSVG("./../assets/delete.svg");
         deleteIcon.children.item(0).classList.add("secondary-button-icon");
-        disconnectButton.innerHTML = "Remove device";
-        disconnectButton.prepend(deleteIcon);
+        removeDeviceButton.innerHTML = "Remove device";
+        removeDeviceButton.prepend(deleteIcon);
         // Check if the device is connected or not in order to set the disabled
         //     attribute of the disconnect button for the device
         // homeController
@@ -307,11 +310,18 @@ export const homeView = (function () {
         //   ? undefined
         //   : disconnectButton.setAttribute("disabled", true);
         // disconnectButton.innerHTML = "Remove device";
-        disconnectButton.addEventListener("click", () => {
+        removeDeviceButton.addEventListener("click", () => {
+          mappingDiv.remove();
+          delete allsupportedDevicesKeyMappings[someDeviceKeyMappingsKey];
+          homeController.setUserMadeKeyMappings(
+            allsupportedDevicesKeyMappings
+          );
+          console.log(allsupportedDevicesKeyMappings);
+          homeController.disconnectDevice(someDeviceKeyMappingsKey);
           // homeController.disconnectDevice(someDeviceKeyMappingsKey);
           // disconnectButton.setAttribute("disabled", true);
         });
-        disconnectButton.disabled = !modifiable;
+        removeDeviceButton.disabled = !modifiable;
         const nameContainer = document.createElement("div");
         nameContainer.classList.add("name-container");
         const deviceLogo = new Image();
@@ -348,7 +358,7 @@ export const homeView = (function () {
         addInputButton.prepend(plusIcon);
         addInputButton.disabled = !modifiable;
         buttonsContainer.appendChild(addInputButton);
-        buttonsContainer.appendChild(disconnectButton);
+        buttonsContainer.appendChild(removeDeviceButton);
 
         deviceDivHeader.appendChild(nameContainer);
         deviceDivHeader.appendChild(buttonsContainer);
@@ -363,7 +373,14 @@ export const homeView = (function () {
 
         // mappingDiv.appendChild(vid);
         // mappingDiv.appendChild(pid);
-
+        if (
+          Object.keys(
+            allsupportedDevicesKeyMappings[someDeviceKeyMappingsKey].mappings
+          ).length === 0
+        ) {
+          await createKeyMapping(mappingDiv, {}, "", true, modifiable);
+          devicesSpace.appendChild(mappingDiv);
+        }
         // Iterate over every device's keymappings on order to show them
         //     on UI
         for (
@@ -448,6 +465,18 @@ export const homeView = (function () {
   };
 
   /**
+   * Binds the download JSON button click event with the passed function.
+   *
+   * @param {function(undefined): undefined} callbackFunction The function to
+   *     be executed when the button is clicked
+   */
+  const downloadJSONButtonOnClick = (callbackFunction) => {
+    document
+      .getElementById("download-json-button")
+      .addEventListener("click", callbackFunction);
+  };
+
+  /**
    * Binds the test input button click event with the passed function.
    *
    * @param {function(undefined): undefined} callbackFunction The function to
@@ -464,9 +493,10 @@ export const homeView = (function () {
    *
    * @returns {DevicesKeysMappings}
    */
-  const retrieveMappingsFromUI = () => {
+  const retrieveMappingsFromUI = async () => {
     const allSupportedDevicesMappings =
-      homeController.getAllSupportedDevicesKeyMappings();
+      await homeController.getAllSupportedDevicesKeyMappings();
+    console.log("conncted device", homeController.getConnectedDevices());
     for (const connectedDevice of homeController.getConnectedDevices()) {
       const someDeviceKeyMappings = {};
       const device = `${connectedDevice.deviceName}-${connectedDevice.vendorId}-${connectedDevice.productId}`;
@@ -502,6 +532,7 @@ export const homeView = (function () {
 
   return {
     connectDeviceButtonOnClick,
+    downloadJSONButtonOnClick,
     deviceDisconnectButton,
     retrieveMappingsFromUI,
     // deviceInputModeButtonOnClick,
@@ -512,20 +543,3 @@ export const homeView = (function () {
     // updateDevicesConnectedLabel,
   };
 })();
-
-async function loadSVG(file) {
-  try {
-    const response = await fetch(file);
-    const svgText = await response.text();
-
-    const parser = new DOMParser();
-    const svgDoc = parser.parseFromString(svgText, "image/svg+xml");
-    const svgElement = svgDoc.documentElement;
-
-    // svgElement.setAttribute("fill", fillColor);
-
-    return svgElement;
-  } catch (error) {
-    console.error("Error loading SVG:", error);
-  }
-}

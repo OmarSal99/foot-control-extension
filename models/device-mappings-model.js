@@ -25,22 +25,33 @@ export const devicesWithMappingsModel = (function () {
    *
    * @param {DevicesKeysMappings} userMadeMappings
    */
-  const setUserMadeMappings = (userMadeMappings) => {
-    localStorage.setItem(
-      LOCAL_STORAGE.USER_EDITED_DEVICES_KEY_MAPPINGS,
-      JSON.stringify(userMadeMappings)
-    );
+  const setUserMadeMappings = async (userMadeMappings) => {
+    const userMappings = {};
+    userMappings[LOCAL_STORAGE.USER_EDITED_DEVICES_KEY_MAPPINGS] =
+      JSON.stringify(userMadeMappings);
+    await chrome.storage.local.set(userMappings);
+    // localStorage.setItem(
+    //   LOCAL_STORAGE.USER_EDITED_DEVICES_KEY_MAPPINGS,
+    //   JSON.stringify(userMadeMappings)
+    // );
   };
 
   /**
    * Gets mappings made by the user for the supported devices.
    *
-   * @returns {DevicesKeysMappings}
+   * @returns {Promise<DevicesKeysMappings>}
    */
-  const getUserMadeMappings = () => {
-    return JSON.parse(
-      localStorage.getItem(LOCAL_STORAGE.USER_EDITED_DEVICES_KEY_MAPPINGS)
+  const getUserMadeMappings = async () => {
+    const userMadeMappings = await chrome.storage.local.get(
+      LOCAL_STORAGE.USER_EDITED_DEVICES_KEY_MAPPINGS,
     );
+    if(userMadeMappings[LOCAL_STORAGE.USER_EDITED_DEVICES_KEY_MAPPINGS])
+      return JSON.parse(userMadeMappings[LOCAL_STORAGE.USER_EDITED_DEVICES_KEY_MAPPINGS]);
+    else 
+      return null
+    // return JSON.parse(
+    //   localStorage.getItem(LOCAL_STORAGE.USER_EDITED_DEVICES_KEY_MAPPINGS)
+    // );
   };
 
   /**
@@ -48,22 +59,34 @@ export const devicesWithMappingsModel = (function () {
    *
    * @param {DevicesKeysMappings} devicesMainKeyMappings
    */
-  const setDevicesMainKeyMappings = (devicesMainKeyMappings) => {
-    localStorage.setItem(
-      LOCAL_STORAGE.DEVICES_MAIN_KEY_MAPPINGS,
-      JSON.stringify(devicesMainKeyMappings)
-    );
+  const setDevicesMainKeyMappings = async (devicesMainKeyMappings) => {
+    console.log(devicesMainKeyMappings)
+    const mainMappings = {};
+    mainMappings[LOCAL_STORAGE.DEVICES_MAIN_KEY_MAPPINGS] =
+      JSON.stringify(devicesMainKeyMappings);
+      console.log("mainMappings", mainMappings)
+    await chrome.storage.local.set(mainMappings);
+    const dd = await chrome.storage.local.get(LOCAL_STORAGE.DEVICES_MAIN_KEY_MAPPINGS)
+    console.log("ddd", JSON.parse(dd[LOCAL_STORAGE.DEVICES_MAIN_KEY_MAPPINGS]))
+    // localStorage.setItem(
+    //   LOCAL_STORAGE.DEVICES_MAIN_KEY_MAPPINGS,
+    //   JSON.stringify(devicesMainKeyMappings)
+    // );
   };
 
   /**
    * Gets main mappings for the supported devices.
    *
-   * @returns {DevicesKeysMappings}
+   * @returns {Promise<DevicesKeysMappings>}
    */
-  const getDevicesMainKeyMappings = () => {
-    return JSON.parse(
-      localStorage.getItem(LOCAL_STORAGE.DEVICES_MAIN_KEY_MAPPINGS)
+  const getDevicesMainKeyMappings = async () => {
+    const mainMappings = await chrome.storage.local.get(
+     LOCAL_STORAGE.DEVICES_MAIN_KEY_MAPPINGS,
     );
+    return JSON.parse(mainMappings[LOCAL_STORAGE.DEVICES_MAIN_KEY_MAPPINGS]);
+    // return JSON.parse(
+    //   localStorage.getItem(LOCAL_STORAGE.DEVICES_MAIN_KEY_MAPPINGS)
+    // );
   };
 
   /**
@@ -75,19 +98,21 @@ export const devicesWithMappingsModel = (function () {
    *
    * @returns {DevicesKeysMappings}
    */
-  const loadMappings = () => {
-    let allSupportedDevicesKeyMappings = getDevicesMainKeyMappings();
+  const loadMappings = async () => {
+    let allSupportedDevicesKeyMappings = await getDevicesMainKeyMappings();
+    console.log("main", allSupportedDevicesKeyMappings);
     /**
      * @type {DevicesKeysMappings}
      */
-    const userDefinedDevicesKeysMappings = getUserMadeMappings();
+    const userDefinedDevicesKeysMappings = await getUserMadeMappings();
+    console.log("user", userDefinedDevicesKeysMappings);
 
     if (userDefinedDevicesKeysMappings) {
       // To append the newly supported devices.
       const listOfNewSupportedDevices = [];
-      Object.keys(allSupportedDevicesKeyMappings).forEach((device) => {
+      Object.keys(userDefinedDevicesKeysMappings).forEach((device) => {
         if (
-          !Object.keys(userDefinedDevicesKeysMappings).some(
+          !Object.keys(allSupportedDevicesKeyMappings).some(
             (oldDevice) => oldDevice == device
           )
         ) {
@@ -96,16 +121,16 @@ export const devicesWithMappingsModel = (function () {
       });
 
       listOfNewSupportedDevices.forEach((deviceName) => {
-        userDefinedDevicesKeysMappings[deviceName] =
-          allSupportedDevicesKeyMappings[deviceName];
+        allSupportedDevicesKeyMappings[deviceName] =
+          userDefinedDevicesKeysMappings[deviceName];
       });
 
       // To remove any dropped devices that were supported.
       const devicesToRemove = [];
-      Object.keys(userDefinedDevicesKeysMappings).forEach(
+      Object.keys(allSupportedDevicesKeyMappings).forEach(
         (oldSupportedDevice) => {
           if (
-            !Object.keys(allSupportedDevicesKeyMappings).some(
+            !Object.keys(userDefinedDevicesKeysMappings).some(
               (device) => device == oldSupportedDevice
             )
           ) {
@@ -115,12 +140,12 @@ export const devicesWithMappingsModel = (function () {
       );
 
       devicesToRemove.forEach((device) => {
-        delete userDefinedDevicesKeysMappings[device];
+        delete allSupportedDevicesKeyMappings[device];
       });
       allSupportedDevicesKeyMappings = userDefinedDevicesKeysMappings;
     }
-    setDevicesMainKeyMappings(allSupportedDevicesKeyMappings);
-    console.log("sssssssssssssss", allSupportedDevicesKeyMappings)
+    await setDevicesMainKeyMappings(allSupportedDevicesKeyMappings);
+    console.log("sssssssssssssss", allSupportedDevicesKeyMappings);
     return allSupportedDevicesKeyMappings;
   };
 
@@ -130,56 +155,60 @@ export const devicesWithMappingsModel = (function () {
    * Checks what devices the admin permitted, then loads their mappings based on
    *     the extension's support for the mentioned devices.
    */
-  const loadMappingsFromPolicyFile = () => {
-    // let policyDevices = [];
-    // chrome.storage.managed.get((data) => {
-    //   policyDevices = data.devices;
+  const loadMappingsFromPolicyFile = async () => {
+    // return new Promise((resolve, reject) => {
+      let policyDevices = [];
+      // chrome.storage.managed.get((data) => {
+        // policyDevices = data.devices;
+        // console.log("policyDevices", policyDevices);
+        const supportedDevices = [];
+        // to find what devices are supported are also listed in the JSON config file
+        DEVICES_LIST.forEach((device) => {
+          const filterResult = devicesMappings.filter((deviceMapping) => {
+            return (
+              device.driver.vendorId === deviceMapping.vid &&
+              device.driver.productId === deviceMapping.pid
+            );
+          })[0];
+
+          if (filterResult) {
+            supportedDevices.push(filterResult);
+          }
+        });
+        console.log(supportedDevices);
+
+        /**
+         * @type {DevicesKeysMappings}
+         */
+        const allSupportedDevicesKeyMappings = {};
+
+        for (const device of supportedDevices) {
+          const mappings = {};
+          allSupportedDevicesKeyMappings[
+            `${device.name}-${device.vid}-${device.pid}`
+          ] = { modifiable: device.modifiable, mappings: {} };
+
+          let index = 0;
+          for (const mapping of device.mapping) {
+            mappings[mapping.input] = mapping.output.map((char) => ({
+              key: char,
+              keycode: char.charCodeAt(0),
+            }));
+            allSupportedDevicesKeyMappings[
+              `${device.name}-${device.vid}-${device.pid}`
+            ].mappings[mapping.input] = {
+              outputKeys: mappings[mapping.input],
+              order: index + 1,
+            };
+            index++;
+          }
+          console.log("omaromaraor", allSupportedDevicesKeyMappings);
+          // Store the loaded mappings as the devices main mappings in local storage
+          await setDevicesMainKeyMappings(allSupportedDevicesKeyMappings);
+        }
+    //     resolve();
+    //   });
     // });
-    const supportedDevices = [];
-    // to find what devices are supported are also listed in the JSON config file
-    DEVICES_LIST.forEach((device) => {
-      const filterResult = devicesMappings.filter((deviceMapping) => {
-        return (
-          device.driver.vendorId === deviceMapping.vid &&
-          device.driver.productId === deviceMapping.pid
-        );
-      })[0];
-
-      if (filterResult) {
-        supportedDevices.push(filterResult);
-      }
-    });
-    console.log(supportedDevices);
-
-    /**
-     * @type {DevicesKeysMappings}
-     */
-    const allSupportedDevicesKeyMappings =   {};
-
-    for (const device of supportedDevices) {
-      const mappings = {};
-      allSupportedDevicesKeyMappings[
-        `${device.name}-${device.vid}-${device.pid}`
-      ] = {modifiable: device.modifiable, mappings: {}};
-      
-      let index = 0;
-      for (const mapping of device.mappings) {
-        mappings[mapping.input] = mapping.output.map((char) => ({
-          key: char,
-          keycode: char.charCodeAt(0),
-        }));
-        allSupportedDevicesKeyMappings[
-          `${device.name}-${device.vid}-${device.pid}`
-        ].mappings[mapping.input] = {
-          outputKeys: mappings[mapping.input],
-          order: index + 1,
-        };
-        index++;
-      }
-      console.log("omaromaraor", allSupportedDevicesKeyMappings)
-      // Store the loaded mappings as the devices main mappings in local storage
-      setDevicesMainKeyMappings(allSupportedDevicesKeyMappings);
-    }
   };
 
   return {

@@ -22,7 +22,7 @@ button {
   color: white;
   border: none;
   border-radius: 18px;
-  padding: 0.65rem;
+  padding: 8px 16px;
   cursor: pointer;
   text-align: center;
   width: fit-content;

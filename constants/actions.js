@@ -17,4 +17,5 @@ export const ACTIONS = {
     "request devices connected with all supported devices mappings",
   BROADCAST_CONNECTED_DEVICES_WITH_MAPPINGS_RESPONSE:
     "receive devices connected with all supported devices mappings",
+  APPEND_NEW_DEVICE_MAPPINGS: "APPEND_NEW_DEVICE_MAPPINGS",
 };

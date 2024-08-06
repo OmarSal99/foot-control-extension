@@ -1,15 +1,29 @@
 import { ACTIONS } from "./constants/actions.js";
 import { DEVICES_LIST } from "./constants/devices-list.js";
+import { LOCAL_STORAGE } from "./constants/local-storage-keys.js";
 
-chrome.runtime.onStartup.addListener(async () => {
-  const devicesWithPermissions = await navigator.hid.getDevices();
-  console.log(devicesWithPermissions);
-  devicesWithPermissions.forEach(async (device) => {
-    if (device.opened) {
-      return;
-    }
-    connectDevice(device.productId, device.vendorId);
-  });
+// chrome.runtime.onStartup.addListener(async () => {
+//   const devicesWithPermissions = await navigator.hid.getDevices();
+//   console.log(devicesWithPermissions);
+//   devicesWithPermissions.forEach(async (device) => {
+//     if (device.opened) {
+//       return;
+//     }
+//     connectDevice(device.productId, device.vendorId);
+//   });
+// });
+// chrome.tabs.onCreated.addListener(async () => {
+//   const devicesWithPermissions = await navigator.hid.getDevices();
+//   console.log(devicesWithPermissions);
+//   devicesWithPermissions.forEach(async (device) => {
+//     if (device.opened) {
+//       return;
+//     }
+//     connectDevice(device.productId, device.vendorId);
+//   });
+// });
+chrome.storage.onChanged.addListener((changes, area) => {
+  console.log(changes, area);
 });
 
 /**
@@ -35,10 +49,6 @@ let debuggerQueue = [];
 const MAX_WAITING_TIME = 3000;
 // max loops before key input is dropped
 const MAX_LOOPS = 1000;
-
-const KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE = "key mapping service-worker";
-const DEVICE_DETAILS_SERVICE_WORKER_LOCAL_STORAGE =
-  "device details service-worker";
 
 let popupTimer = undefined;
 let forwardInputToPopup = false;
@@ -256,7 +266,6 @@ const handleKeyInput = async (deviceName, vendorId, productId, key) => {
     `typeof vid ${typeof vendorId}, type of pid ${typeof productId}, type of key pressed ${typeof key}`
   );
   //resolve the input key to it output keys, it make sure that every output only run when the previous one is done
-
   //if the user is in the input field, there is no output keys instead it just send the input key to the popup
   if (forwardInputToPopup) {
     chrome.runtime.sendMessage({
@@ -413,46 +422,41 @@ async function connectDevice(productId, vendorId) {
     await device.driver.open();
     device.driver.setEntryHandler(handleKeyInput);
   } catch (error) {
-    // chrome.notifications.create("", {
-    //   title: "Connection Failure",
-    //   message:
-    //     "HID device couldn't be opened, check device access permissions.",
-    //   type: "basic",
-    //   iconUrl: "./extension-logo.png",
-    // });
     console.log(error);
     return;
   }
 
   deviceName = device.driver.deviceName;
-  // chrome.notifications.create("", {
-  //   title: "Connection Succeeded",
-  //   message: `${deviceName} with VID: ${vendorId} and PID: ${productId} has been successfully connected.`,
-  //   type: "basic",
-  //   iconUrl: "./extension-logo.png",
-  // });
-
   deviceDetails = { pid: productId, vid: vendorId };
   connectedDevices.push({
     deviceName: deviceName,
     vendorId: vendorId,
     productId: productId,
   });
+
+  if (isNewDevice(productId, vendorId)) {
+    // const allDevicesKeyMappings = keyMapping;
+    // allDevicesKeyMappings[`${deviceName}-${vendorId}-${productId}`] = {
+    //   modifiable: true,
+    //   mappings: {},
+    // };
+    // keyMapping = allDevicesKeyMappings;
+    chrome.runtime.sendMessage({
+      action: ACTIONS.APPEND_NEW_DEVICE_MAPPINGS,
+      deviceDetails: {
+        deviceName: deviceName,
+        vendorId: vendorId,
+        productId: productId,
+      },
+    });
+  }
+
   // Send msg for popups to update the mapping to the new device name
   chrome.runtime.sendMessage({
     action: ACTIONS.BROADCAST_CONNECTED_DEVICES_WITH_MAPPINGS_RESPONSE,
     connectedDevices: connectedDevices,
   });
   console.log("sent device details");
-
-  // //store the details of the last connected device
-  // const storageObject = {};
-  // storageObject[DEVICE_DETAILS_SERVICE_WORKER_LOCAL_STORAGE] = {
-  //   deviceName: deviceName,
-  //   productId: productId,
-  //   vendorId: vendorId,
-  // };
-  // chrome.storage.local.set(storageObject, function () {});
 }
 
 /**
@@ -478,57 +482,68 @@ function isDevicePermittedToConnect(productId, vendorId) {
   }
 
   if (device === undefined) {
-    // chrome.notifications.create("", {
-    //   title: "Connection Failure",
-    //   message: "Device not supported.",
-    //   type: "basic",
-    //   iconUrl: "./extension-logo.png",
-    // });
     console.log("unable to find device in the devices-list");
     return false;
   }
+  // let isDeviceSupportedByAdmin = false;
+  // Object.keys(devicesMappingsSupportedByAdmin).forEach((device) => {
+  //   if (
+  //     parseInt(device.split("-")[2]) === productId &&
+  //     parseInt(device.split("-")[1]) === vendorId
+  //   ) {
+  //     isDeviceSupportedByAdmin = true;
+  //   }
+  // });
 
-  // Check if the admin policy granted access for the selected device
-  let isDeviceSupportedByAdmin = false;
-  Object.keys(devicesMappingsSupportedByAdmin).forEach((device) => {
-    if (
-      parseInt(device.split("-")[2]) === productId &&
-      parseInt(device.split("-")[1]) === vendorId
-    ) {
-      isDeviceSupportedByAdmin = true;
-    }
-  });
-
-  if (!isDeviceSupportedByAdmin) {
-    // chrome.notifications.create("", {
-    //   title: "Connection Failure",
-    //   message:
-    //     "Device not supported by admin.\nContact your admin to grant support.",
-    //   type: "basic",
-    //   iconUrl: "./extension-logo.png",
-    // });
-    console.log("unable to find device in the devices-list");
-    return false;
-  }
-
+  // if (!isDeviceSupportedByAdmin) {
+  //   // chrome.notifications.create("", {
+  //   //   title: "Connection Failure",
+  //   //   message:
+  //   //     "Device not supported by admin.\nContact your admin to grant support.",
+  //   //   type: "basic",
+  //   //   iconUrl: "./extension-logo.png",
+  //   // });
+  //   console.log("unable to find device in the devices-list");
+  //   return false;
+  // }
   // Check if user is trying to connect to already connected device
   if (
     connectedDevices.some(
       (device) => device.productId === productId && device.vendorId === vendorId
     )
   ) {
-    // chrome.notifications.create("", {
-    //   title: "Already connected",
-    //   message: "Device you're trying to connect to is already connected.",
-    //   type: "basic",
-    //   iconUrl: "./extension-logo.png",
-    // });
     console.log("unable to find device in the devices-list");
     return false;
   }
   console.log(`PID is: ${productId}, VID is: ${vendorId}`);
   return true;
 }
+
+const isNewDevice = (productId, vendorId) => {
+  // Check if the admin policy granted access for the selected device
+  let isNewDevice = true;
+  chrome.storage.local
+    .get(LOCAL_STORAGE.DEVICES_MAIN_KEY_MAPPINGS)
+    .then((data) => {
+      console.log("service-main", data);
+    });
+  chrome.storage.local
+    .get(LOCAL_STORAGE.USER_EDITED_DEVICES_KEY_MAPPINGS)
+    .then((data) => {
+      console.log("service-user", data);
+    });
+  return new Promise((resolve, reject) => {
+    chrome.storage.managed.get((data) => {
+      console.log("newDvice", data);
+      data.devices?.forEach((device) => {
+        if (device.pid === productId && device.vid === vendorId) {
+          isNewDevice = false;
+        }
+      });
+      resolve(isNewDevice);
+    });
+  });
+};
 
 /**
  * Responsible for forwarding the device's entry for the popup to configure

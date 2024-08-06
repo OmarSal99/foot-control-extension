@@ -4,14 +4,20 @@ body {
   font-style: normal;
   font-variation-settings: "slnt" 0;
   height: fit-content;
-  min-width: 400px;
+  min-width: 300px;
   display: flex;
   flex-direction: column;
   padding: 0 15;
 }
 
+.extension-title {
+  font-size: 1.5em;
+  font-weight: bold;
+  margin-bottom: 15px;
+}
+
 button {
-  background-color: #3F5AA9;
+  background-color: #3f5aa9;
   color: white;
   border: none;
   border-radius: 18px;
@@ -21,6 +27,7 @@ button {
   text-align: center;
   width: fit-content;
   white-space: nowrap;
+  margin-bottom: 10px;
 }
 
 button:hover {
@@ -33,77 +40,21 @@ button:disabled {
   box-shadow: none;
 }
 
-header {
-  display: flex;
-  gap: 15px;
-  margin-bottom: 5px;
-  align-items: center;
-}
-
-.key-mapping {
+.devices-list {
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
 }
 
-.key-mapping:not(:last-child) {
-  margin-bottom: 5px;
-}
-
-.output-container {
+.device-name-container {
   display: flex;
-  flex-wrap: wrap;
-  width: fit-content;
+  gap: 8px;
+  align-items: center;
 }
-
-.output-container > .output-key {
-  width: 30%;
+.device-name-container p {
+  font-size: 14px;
+  line-height: 20px;
+  color: #1b1b1f;
   margin: 0;
-}
-
-/* Create a new row for every 3rd element */
-.output-container > .output-key:nth-child(3n) {
-  margin-right: 0;
-}
-
-.input-key {
-  width: 100px;
-  height: fit-content;
-  padding: 2px;
-}
-
-.output-key {
-  width: 40px;
-  padding: 2px;
-  height: fit-content;
-}
-
-.input-key-label {
-  padding-left: 2px;
-  padding-right: 2px;
-}
-
-.output-key-label {
-  padding-left: 2px;
-  padding-right: 2px;
-}
-
-.label-value-pair {
-  display: flex;
-  gap: 3px;
-}
-
-input {
-  width: fit-content;
-}
-
-.device-space {
-  margin-bottom: 15px;
-}
-
-.gapped-row {
-  display: flex;
-  gap: 10px;
-  align-self: flex-end;
 }

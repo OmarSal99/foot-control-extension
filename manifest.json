@@ -2,11 +2,11 @@
   "manifest_version": 3,
   "name": "Input mapper",
   "description": "an Extension that allows the user to remap keys of a foot pedal",
-  "version": "1.0.1",
-  "permissions": ["tabs", "debugger", "notifications", "storage", "identity"],
+  "version": "1.0.9",
+  "permissions": ["tabs", "storage"],
   "action": {
     "default_popup": "popup/popup.html",
-    "default_icon": "extension-logo.png"
+    "default_icon": "logo.png"
   },
   "content_scripts": [
     {
