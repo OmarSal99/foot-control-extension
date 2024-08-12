@@ -1,29 +1,98 @@
 import { ACTIONS } from "./constants/actions.js";
 import { DEVICES_LIST } from "./constants/devices-list.js";
 import { LOCAL_STORAGE } from "./constants/local-storage-keys.js";
+import { devicesWithMappingsModel } from "./models/device-mappings-model.js";
 
-// chrome.runtime.onStartup.addListener(async () => {
-//   const devicesWithPermissions = await navigator.hid.getDevices();
-//   console.log(devicesWithPermissions);
-//   devicesWithPermissions.forEach(async (device) => {
-//     if (device.opened) {
-//       return;
-//     }
-//     connectDevice(device.productId, device.vendorId);
-//   });
-// });
-// chrome.tabs.onCreated.addListener(async () => {
-//   const devicesWithPermissions = await navigator.hid.getDevices();
-//   console.log(devicesWithPermissions);
-//   devicesWithPermissions.forEach(async (device) => {
-//     if (device.opened) {
-//       return;
-//     }
-//     connectDevice(device.productId, device.vendorId);
-//   });
-// });
-chrome.storage.onChanged.addListener((changes, area) => {
-  console.log(changes, area);
+chrome.runtime.onStartup.addListener(async () => {
+  const devicesWithPermissions = await navigator.hid.getDevices();
+  console.log(devicesWithPermissions);
+  devicesWithPermissions.forEach(async (device) => {
+    if (device.opened) {
+      return;
+    }
+    connectDevice(device.productId, device.vendorId);
+  });
+});
+
+chrome.tabs.onCreated.addListener(async () => {
+  const devicesWithPermissions = await navigator.hid.getDevices();
+  console.log(devicesWithPermissions);
+  devicesWithPermissions.forEach(async (device) => {
+    if (device.opened) {
+      return;
+    }
+    connectDevice(device.productId, device.vendorId);
+  });
+});
+
+chrome.storage.onChanged.addListener(async (changes, area) => {
+  if (area === "managed") {
+    let currentUserMadeKeyMappings =
+      await devicesWithMappingsModel.getUserMadeMappings();
+    if (!currentUserMadeKeyMappings) {
+      currentUserMadeKeyMappings =
+        await devicesWithMappingsModel.getDevicesMainKeyMappings();
+    }
+    const newDeviceMappingsFromPolicy = changes.devices.newValue;
+    Object.keys(currentUserMadeKeyMappings).forEach((dev) => {
+      let [name, vid, pid] = dev.split("-");
+      let policyDevsFilterResult = newDeviceMappingsFromPolicy.filter(
+        (policyDevice) => {
+          return policyDevice.vid === +vid && policyDevice.pid === +pid;
+        }
+      );
+      if (!policyDevsFilterResult) delete currentUserMadeKeyMappings[dev];
+    });
+    for (const device of newDeviceMappingsFromPolicy) {
+      const deviceKey = `${device.name}-${device.vid}-${device.pid}`;
+      if (!device.modifiable) {
+        currentUserMadeKeyMappings[deviceKey].modifiable = false;
+        const newMappings = {};
+        let index = 0;
+        for (const mapping of device.mapping) {
+          newMappings[mapping.input] = mapping.output.map((char) => ({
+            key: char,
+            keycode: char.charCodeAt(0),
+          }));
+          currentUserMadeKeyMappings[
+            `${device.name}-${device.vid}-${device.pid}`
+          ].mappings[mapping.input] = {
+            outputKeys: newMappings[mapping.input],
+            order: index + 1,
+          };
+          index++;
+        }
+      } else if (!currentUserMadeKeyMappings[deviceKey]) {
+        currentUserMadeKeyMappings[deviceKey] = {
+          modifiable: device.modifiable,
+          mappings: {},
+        };
+        const mappings = {};
+        let index = 0;
+        for (const mapping of device.mapping) {
+          mappings[mapping.input] = mapping.output.map((char) => ({
+            key: char,
+            keycode: char.charCodeAt(0),
+          }));
+          currentUserMadeKeyMappings[
+            `${device.name}-${device.vid}-${device.pid}`
+          ].mappings[mapping.input] = {
+            outputKeys: mappings[mapping.input],
+            order: index + 1,
+          };
+          index++;
+        }
+      }
+    }
+    console.log("updated-managed", currentUserMadeKeyMappings);
+    await devicesWithMappingsModel.setUserMadeMappings(
+      currentUserMadeKeyMappings
+    );
+    await devicesWithMappingsModel.loadMappings();
+    chrome.runtime.sendMessage({
+      action: ACTIONS.MANAGED_STORAGE_UPDATED,
+    });
+  }
 });
 
 /**
@@ -42,13 +111,6 @@ chrome.storage.onChanged.addListener((changes, area) => {
  * @type {KeyMapping}
  */
 let keyMapping = {};
-let debuggerQueue = [];
-
-// this should never be the case but if there is any very rare case apear code can handle it
-// a max waiting time before the key input is dropped
-const MAX_WAITING_TIME = 3000;
-// max loops before key input is dropped
-const MAX_LOOPS = 1000;
 
 let popupTimer = undefined;
 let forwardInputToPopup = false;
@@ -73,12 +135,6 @@ let forwardInputToPopup = false;
 /**
  * @type {DevicesKeysMappings}
  */
-let devicesMappingsSupportedByAdmin = undefined;
-
-// to organize output order
-let sendingOutput = null;
-let isLocked = false;
-let idCounter = 0;
 
 let deviceName = undefined;
 
@@ -88,12 +144,6 @@ let deviceName = undefined;
 let connectedDevices = [];
 
 let deviceDetails = undefined;
-/**Represents the way the service worker will reflect the device's input.
- *   When normal then every input will be mapped to the its corresponding
- *   value configured by the admin/user, and when the mode is test then every
- *   input will appear as the string originally generated by the device.
- */
-let deviceInputMode = "normal";
 
 /**
  * Checks for any HID device of the supported ones disonnection then makes
@@ -118,12 +168,6 @@ navigator.hid.addEventListener("disconnect", ({ device }) => {
       action: ACTIONS.BROADCAST_CONNECTED_DEVICES_WITH_MAPPINGS_RESPONSE,
       connectedDevices: connectedDevices,
     });
-    // chrome.notifications.create("", {
-    //   title: `${disconnectedDevice.deviceName} disconnected`,
-    //   message: `${disconnectedDevice.deviceName} device with VID: ${disconnectedDevice.vendorId} and PID: ${disconnectedDevice.productId} has been disconnected.`,
-    //   type: "basic",
-    //   iconUrl: "./extension-logo.png",
-    // });
   }
 });
 
@@ -140,38 +184,10 @@ navigator.hid.addEventListener("connect", (event) => {
  * @returns {Promise<undefined>}
  */
 function sendCommand(tabs, key, keycode) {
-  // return new Promise((resolve, reject) => {
-  // chrome.debugger.attach({ tabId: tabs[0].id }, "1.0", async function () {
-  //   await new Promise((resolve, reject) => {
-  //     console.log(`Key typed is: ${keycode}`);
-  //     chrome.debugger.sendCommand(
-  //       { tabId: tabs[0].id },
-  //       "Input.dispatchKeyEvent",
-  //       {
-  //         type: "keyDown",
-  //         windowsVirtualKeyCode: keycode,
-  //         nativeVirtualKeyCode: keycode,
-  //         macCharCode: keycode,
-  //         text: key,
-  //         key: key,
-  //         code: key,
-  //       },
-  //       () => {
-  //         resolve();
-  //       }
-  //     );
-  //   });
-  //   chrome.debugger.detach({ tabId: tabs[0].id }, () => {
-
-  //   });
-  // });
-  console.log(tabs);
   chrome.tabs.sendMessage(tabs[0].id, {
     action: "keydown",
     data: { key, keycode },
   });
-  //   resolve();
-  // });
 }
 
 chrome.runtime.onMessage.addListener(async function (
@@ -182,20 +198,7 @@ chrome.runtime.onMessage.addListener(async function (
   console.log(message);
   switch (message.action) {
     case ACTIONS.UPDATE_KEY_MAPPING:
-      console.log("service worker received msg to update the mappings");
       keyMapping = message.keyMapping;
-      console.log("keyMapping is: ");
-      console.log(keyMapping);
-      // let storageObject = {};
-      // storageObject[
-      //   KEY_MAPPING_SERVICE_WORKER_LOCAL_STORAGE + "-" + message.deviceName
-      // ] = message.keyMapping;
-      // chrome.storage.local.set(storageObject, function () {});
-
-      break;
-    case ACTIONS.KEY_EVENT:
-      console.log("keyboard key pressed");
-      // await handleKeyInput(message.key);
       break;
 
     case ACTIONS.DEVICE_PERM_UPDATED:
@@ -211,11 +214,9 @@ chrome.runtime.onMessage.addListener(async function (
 
     case ACTIONS.DEVICE_INPUT_MODE_CHANGED:
       deviceInputMode = message.mode;
-      console.log(deviceInputMode);
       break;
 
     case ACTIONS.REQUEST_CONNECTED_DEVICES_WITH_MAPPINGS:
-      console.log(connectedDevices);
       chrome.runtime.sendMessage({
         action: ACTIONS.BROADCAST_CONNECTED_DEVICES_WITH_MAPPINGS_RESPONSE,
         connectedDevices: connectedDevices,
@@ -275,33 +276,14 @@ const handleKeyInput = async (deviceName, vendorId, productId, key) => {
     return;
   }
   let outputKeys = undefined;
-  console.log("key", key);
-  console.log(
-    "keyekekekekke",
-    keyMapping[`${deviceName}-${vendorId}-${productId}`].mappings[key]
-  );
+
   outputKeys =
     keyMapping[`${deviceName}-${vendorId}-${productId}`].mappings[key]
       ?.outputKeys;
-  // if (deviceInputMode === "normal") {
-
-  // } else if (deviceInputMode === "test") {
-  //   outputKeys = [];
-  //   for (const character of key) {
-  //     outputKeys.push({ key: character, keycode: character.charCodeAt(0) });
-  //   }
-  // }
-  console.log("outouototuout", outputKeys);
-  // let outputKeys = keyMapping[key];
-  console.log("Input from connected device");
-  console.log(key);
   if (!(Array.isArray(outputKeys) && outputKeys.length > 0)) return;
-  //chrome.tabs.query select the curtrent active and open tab to work in it, it will only be closed after all output keys done
-  //that mean even if you changed the tab before the output keys queue is done it will still press the output keys on the tab that you pressed the input keys in
   chrome.tabs.query(
     { active: true, currentWindow: true },
     async function (tabs) {
-      console.log(typeof tabs);
       let i = 0;
       //loop on the output keys
       for (i = 0; i < outputKeys.length; i++) {
@@ -312,83 +294,7 @@ const handleKeyInput = async (deviceName, vendorId, productId, key) => {
         console.log(key);
         // const keycode = parseInt(outputKeys[i].keycode, 10);
         const keycode = outputKeys[i].keycode;
-        console.log(keycode);
-        console.log(String.fromCharCode(keycode));
-        const myId = idCounter++;
-        const process = async (key, keycode, myId) => {
-          //to send ouput key to dom we are using a debugger that will send that key to the browser (chrome)
-          //and then the browser will send it to the dom, the debugger return a promise if the loop continue to run
-          //without waiting for that promise output keys may get mixed and not printed in order!
-          //the promise variable hold the actual promise that the debugger return
-          let promise = null;
-          //myId is a uniqe number (generated by idCounter) to manage which is the next output
-          debuggerQueue.push(myId);
-          //time started is stored so if the input key is pressed before MAX_WAITING_TIME or more it won't print the output
-          const timeStarted = new Date().getTime();
-          //same as time but if it extend a number of loops (or if an error happened it prevent inf loop)
-          let numberOfLoops = 0;
-          //wait for your id to be on top of the queue, then wait to the current process to be finished (it will make islocked false when it done)
-          //it will only loop 1 time then wait for sendingOutput promise which will get resolved when the prevois process finish
-          while (isLocked || debuggerQueue[0] != myId) {
-            if (
-              numberOfLoops > MAX_LOOPS ||
-              timeStarted + MAX_WAITING_TIME < new Date().getTime()
-            ) {
-              console.log("enter special case !!!");
-              try {
-                debuggerQueue.splice(debuggerQueue.indexOf(myId), 1);
-              } catch {}
-              return;
-            }
-            await sendingOutput;
-            numberOfLoops++;
-          }
-          isLocked = true;
-          //this will pop the current id from the top of the queue so the next process id is in top now
-          debuggerQueue.shift();
-          // if (key.length === 1) {
-          console.log(tabs[0]);
-          promise = sendCommand(tabs, key, keycode);
-          // } else {
-          //   switch (key) {
-          //     case "F5":
-          //       console.log("refresh page !");
-          //       promise = new Promise((resolve, reject) => {
-          //         chrome.tabs.sendMessage(tabs[0].id, {
-          //           action: ACTIONS.REFRESH_PAGE,
-          //         });
-          //         resolve();
-          //       });
-          //       break;
-          //     case "Tab":
-          //       console.log("tab pressed !");
-          //       promise = new Promise((resolve, reject) => {
-          //         chrome.tabs.sendMessage(tabs[0].id, {
-          //           action: ACTIONS.TAB,
-          //         });
-          //         resolve();
-          //       });
-          //       break;
-          //     case "F11":
-          //       console.log("fullscreen toggle");
-          //       promise = new Promise((resolve, reject) => {
-          //         chrome.tabs.sendMessage(tabs[0].id, {
-          //           action: ACTIONS.FULL_SCREEN,
-          //         });
-          //         resolve();
-          //       });
-          //       break;
-          //     default:
-          //       break;
-          //   }
-          // }
-          sendingOutput = promise;
-          await promise;
-
-          //release the lock after promise is finished
-          isLocked = false;
-        };
-        process(key, keycode, myId);
+        await sendCommand(tabs, key, keycode);
       }
     }
   );
@@ -435,12 +341,6 @@ async function connectDevice(productId, vendorId) {
   });
 
   if (isNewDevice(productId, vendorId)) {
-    // const allDevicesKeyMappings = keyMapping;
-    // allDevicesKeyMappings[`${deviceName}-${vendorId}-${productId}`] = {
-    //   modifiable: true,
-    //   mappings: {},
-    // };
-    // keyMapping = allDevicesKeyMappings;
     chrome.runtime.sendMessage({
       action: ACTIONS.APPEND_NEW_DEVICE_MAPPINGS,
       deviceDetails: {
@@ -485,27 +385,7 @@ function isDevicePermittedToConnect(productId, vendorId) {
     console.log("unable to find device in the devices-list");
     return false;
   }
-  // let isDeviceSupportedByAdmin = false;
-  // Object.keys(devicesMappingsSupportedByAdmin).forEach((device) => {
-  //   if (
-  //     parseInt(device.split("-")[2]) === productId &&
-  //     parseInt(device.split("-")[1]) === vendorId
-  //   ) {
-  //     isDeviceSupportedByAdmin = true;
-  //   }
-  // });
 
-  // if (!isDeviceSupportedByAdmin) {
-  //   // chrome.notifications.create("", {
-  //   //   title: "Connection Failure",
-  //   //   message:
-  //   //     "Device not supported by admin.\nContact your admin to grant support.",
-  //   //   type: "basic",
-  //   //   iconUrl: "./extension-logo.png",
-  //   // });
-  //   console.log("unable to find device in the devices-list");
-  //   return false;
-  // }
   // Check if user is trying to connect to already connected device
   if (
     connectedDevices.some(

@@ -28,28 +28,30 @@ export class GamepadDriver extends BaseDriver {
     this.hidDevice.addEventListener("inputreport", (event) => {
       const { data, device, reportId } = event;
       let uint8Array = new Uint8Array(data.buffer);
-      const deviceInput = uint8Array[0];
-      if (deviceInput === 127) return;
 
       console.log(uint8Array);
-      // const base64String = btoa(String.fromCharCode.apply(null, uint8Array));
-      console.log(deviceInput);
+      const base64String = btoa(String.fromCharCode.apply(null, uint8Array));
       // The following strings within the condition represent neutral entries by the device
-      // if (
-      //   base64String !== "f39/f38PAMA=" &&
-      //   base64String !== "f39+f38PAMA=" &&
-      //   base64String !== "f3+Af38PAMA=" &&
-      //   base64String !== "f399f38PAMA=" &&
-      //   base64String !== "f3+Bf38PAMA=" &&
-      //   base64String !== "f3+Cf38PAMA="
-      // ) {
-      //   const currentTime = new Date().getTime();
-      //   if (currentTime - this.lastEntryTime > 1000) {
-      //     console.log("Different entry");
-      //     this.lastEntryTime = currentTime;
-      //     callbackFunction(this.deviceName, this.vendorId, this.productId, "");
-      //   }
-      // }
+      if (
+        base64String !== "f39/f38PAMA=" &&
+        base64String !== "f39+f38PAMA=" &&
+        base64String !== "f3+Af38PAMA=" &&
+        base64String !== "f399f38PAMA=" &&
+        base64String !== "f3+Bf38PAMA=" &&
+        base64String !== "f3+Cf38PAMA="
+      ) {
+        const currentTime = new Date().getTime();
+        if (currentTime - this.lastEntryTime > 1000) {
+          console.log("Different entry");
+          this.lastEntryTime = currentTime;
+          callbackFunction(
+            this.deviceName,
+            this.vendorId,
+            this.productId,
+            base64String
+          );
+        }
+      }
     });
   };
 }

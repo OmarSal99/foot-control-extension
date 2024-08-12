@@ -1,6 +1,6 @@
 import { ACTIONS } from "../constants/actions.js";
-import { popupView } from "./view.js";
 import { devicesWithMappingsModel } from "../models/device-mappings-model.js";
+import { popupView } from "./view.js";
 
 export const popupController = (function () {
   /**
@@ -12,30 +12,18 @@ export const popupController = (function () {
   };
 })();
 
-/**
- * Sends message to ask for connected devices.
- */
-const requestConnectedDevices = () => {
-  chrome.runtime.sendMessage({
-    action: ACTIONS.REQUEST_CONNECTED_DEVICES_WITH_MAPPINGS,
-  });
-};
-
 window.addEventListener("load", async () => {
   //bind buttons and request the connected devices from the background
   popupView.connectDeviceButtonOnClick(popupView.connectDeviceSelection);
-  requestConnectedDevices();
-});
-
-//add listeners to msgs
-chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
-  console.log("msg recieved in popup");
-  console.log(message);
-  switch (message.action) {
-    case ACTIONS.BROADCAST_CONNECTED_DEVICES_WITH_MAPPINGS_RESPONSE:
-      popupController.connectedDevices = message.connectedDevices;
-      console.log(message.connectedDevices);
-      popupView.updateConnectedDevicesNamesField();
-      break;
+  let allDevicesMappings =
+    await devicesWithMappingsModel.getDevicesMainKeyMappings();
+  if (allDevicesMappings) {
+    popupController.connectedDevices = Object.keys(allDevicesMappings).map(
+      (deviceDetails) => {
+        let [deviceName, vendorId, productId] = deviceDetails.split("-");
+        return { deviceName, vendorId, productId };
+      }
+    );
   }
+  popupView.updateConnectedDevicesNamesField();
 });

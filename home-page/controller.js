@@ -175,12 +175,6 @@ const connectDeviceAttempt = async () => {
       });
     })
     .catch((error) => {
-      // chrome.notifications.create("", {
-      //   title: "Connection Failure",
-      //   message: "Couldn't connect to device, check permissions.",
-      //   type: "basic",
-      //   iconUrl: "./extension-logo.png",
-      // });
       console.error("Error connecting to HID device:", error);
     });
 };
@@ -269,16 +263,7 @@ chrome.runtime.onMessage.addListener(async function (
         action: ACTIONS.UPDATE_KEY_MAPPING,
         keyMapping: allSupportedDevicesKeyMappings,
       });
-      const connectedDevicesNames = message.connectedDevices.map(
-        (connectedDevice) =>
-          `${connectedDevice.deviceName}-${connectedDevice.vendorId}-${connectedDevice.productId}`
-      );
 
-      // Object.keys(allSupportedDevicesKeyMappings).forEach((supportedDevice) => {
-      //   if (!connectedDevicesNames.includes(supportedDevice)) {
-      //     homeView.deviceDisconnectButton.disable(supportedDevice);
-      //   }
-      // });
       homeController.setConnectedDevices(message.connectedDevices);
       console.log("connected", homeController.getConnectedDevices());
 
@@ -294,9 +279,6 @@ chrome.runtime.onMessage.addListener(async function (
             const fullDeviceName = `${connectedDevice.deviceName}-${connectedDevice.vendorId}-${connectedDevice.productId}`;
             homeView.deviceDisconnectButton.enable(fullDeviceName);
           });
-        // homeView.updateDevicesConnectedLabel(connectedDevicesNames);
-      } else {
-        // homeView.updateDevicesConnectedLabel();
       }
       break;
     case ACTIONS.APPEND_NEW_DEVICE_MAPPINGS:
@@ -307,9 +289,10 @@ chrome.runtime.onMessage.addListener(async function (
         modifiable: true,
         mappings: {},
       };
-      await devicesWithMappingsModel.setUserMadeMappings(
-        allDevicesKeyMappings
-      );
+      await devicesWithMappingsModel.setUserMadeMappings(allDevicesKeyMappings);
+      homeView.showMappings();
+      break;
+    case ACTIONS.MANAGED_STORAGE_UPDATED:
       homeView.showMappings();
       break;
   }

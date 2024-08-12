@@ -3,22 +3,6 @@ import { homeController } from "./controller.js";
 
 export const homeView = (function () {
   /**
-   * Updates the field of names of connected devices.
-   *
-   * @param {string | undefined} devicesConnected Respresents the names of the
-   *     connected devices, when undefined the field will convey that no device
-   *     is connected.
-   */
-  // const updateDevicesConnectedLabel = (devicesConnected) => {
-  //   const devicesNameLabel = document.getElementById("device-name");
-  //   if (devicesConnected) {
-  //     devicesNameLabel.textContent = `Devices connected: ${devicesConnected}`;
-  //   } else {
-  //     devicesNameLabel.textContent = `No device connected`;
-  //   }
-  // };
-
-  /**
    * Provides control over devices' diconnect buttons to enable/disable them.
    */
   const deviceDisconnectButton = {
@@ -53,32 +37,6 @@ export const homeView = (function () {
     },
   };
 
-  /**
-   * Provides for functionality of enabling and disabling the test mode button
-   */
-  // const testModeButton = {
-  //   /**
-  //    * Enables the test mode button
-  //    *
-  //    * @inner
-  //    * @function
-  //    */
-  //   enable: () => {
-  //     document.getElementById("test-mode-button").removeAttribute("disabled");
-  //   },
-
-  //   /**
-  //    * Disables the test mode button
-  //    *
-  //    * @inner
-  //    * @function
-  //    */
-  //   disable: () => {
-  //     document
-  //       .getElementById("test-mode-button")
-  //       .setAttribute("disabled", true);
-  //   },
-  // };
   const deleteInput = (inputDiv) => {
     if (inputDiv.previousElementSibling.className === "separator")
       inputDiv.previousElementSibling.remove();
@@ -160,9 +118,7 @@ export const homeView = (function () {
     });
 
     inputElement.disabled = isNewMapping ? false : modifiable ? false : true;
-    // Extract device's input based on order
 
-    console.log("deviceInputKeyToShow", deviceInputKeyToShow);
     inputElement.value = isNewMapping ? "" : deviceInputKeyToShow;
 
     const outputKeyLabel = document.createElement("label");
@@ -177,9 +133,6 @@ export const homeView = (function () {
     outputContainer.classList.add("output-container");
     outputContainer.appendChild(outputKeyLabel);
 
-    // console.log(allsupportedDevicesKeyMappings[someDeviceKeyMappingsKey]);
-    // console.log(deviceInputKeyToShow);
-
     // Iterate over the mappings of the extracted device's input
     //     in order to show them
     if (!isNewMapping) {
@@ -192,37 +145,10 @@ export const homeView = (function () {
           keyMappingObj[deviceInputKeyToShow].outputKeys[j]["key"],
           !modifiable
         );
-        // const outputKeyContainer = document.createElement("div");
-        // outputKeyContainer.classList.add("output-key-container");
-        // const outputKeyElement = document.createElement("input");
-        // outputKeyElement.type = "text";
-        // outputKeyElement.value =
-        //   keyMappingObj[deviceInputKeyToShow].outputKeys[j]["key"];
-        // outputKeyElement.disabled = true;
-        // outputKeyElement.classList.add("output-key");
-        // outputKeyContainer.appendChild(outputKeyElement);
-
-        // const deleteOutputButton = await loadSVG("./../assets/delete.svg");
-        // deleteOutputButton.classList.add("delete-button");
-
-        // outputKeyContainer.appendChild(deleteOutputButton);
         outputContainer.appendChild(newOutput);
       }
     } else {
       let newOutput = await createOutput("", !modifiable);
-      // const outputKeyContainer = document.createElement("div");
-      // outputKeyContainer.classList.add("output-key-container");
-      // const outputKeyElement = document.createElement("input");
-      // outputKeyElement.type = "text";
-      // outputKeyElement.value = "";
-      // outputKeyElement.disabled = false;
-      // outputKeyElement.classList.add("output-key");
-      // outputKeyContainer.appendChild(outputKeyElement);
-
-      // const deleteOutputButton = await loadSVG("./../assets/delete.svg");
-      // deleteOutputButton.classList.add("delete-button");
-
-      // outputKeyContainer.appendChild(deleteOutputButton);
       outputContainer.appendChild(newOutput);
     }
 
@@ -297,29 +223,12 @@ export const homeView = (function () {
         deleteIcon.children.item(0).classList.add("secondary-button-icon");
         removeDeviceButton.innerHTML = "Remove device";
         removeDeviceButton.prepend(deleteIcon);
-        // Check if the device is connected or not in order to set the disabled
-        //     attribute of the disconnect button for the device
-        // homeController
-        //   .getConnectedDevices()
-        //   .some(
-        //     (connectedDevice) =>
-        //       connectedDevice.deviceName == deviceDetails.name &&
-        //       connectedDevice.productId == deviceDetails.productId &&
-        //       connectedDevice.vendorId == deviceDetails.vendorId
-        //   )
-        //   ? undefined
-        //   : disconnectButton.setAttribute("disabled", true);
-        // disconnectButton.innerHTML = "Remove device";
+
         removeDeviceButton.addEventListener("click", () => {
           mappingDiv.remove();
           delete allsupportedDevicesKeyMappings[someDeviceKeyMappingsKey];
-          homeController.setUserMadeKeyMappings(
-            allsupportedDevicesKeyMappings
-          );
-          console.log(allsupportedDevicesKeyMappings);
+          homeController.setUserMadeKeyMappings(allsupportedDevicesKeyMappings);
           homeController.disconnectDevice(someDeviceKeyMappingsKey);
-          // homeController.disconnectDevice(someDeviceKeyMappingsKey);
-          // disconnectButton.setAttribute("disabled", true);
         });
         removeDeviceButton.disabled = !modifiable;
         const nameContainer = document.createElement("div");
@@ -371,8 +280,6 @@ export const homeView = (function () {
           mappingDiv.appendChild(notification);
         }
 
-        // mappingDiv.appendChild(vid);
-        // mappingDiv.appendChild(pid);
         if (
           Object.keys(
             allsupportedDevicesKeyMappings[someDeviceKeyMappingsKey].mappings
@@ -421,38 +328,6 @@ export const homeView = (function () {
   };
 
   /**
-   * Binds the button with a callback function to be executed on click event.
-   *
-   * @param {function(undefined):undefined} callbackFunction Thu function to
-   *     be called when the button is clicked
-   */
-  // const deviceInputModeButtonOnClick = (callbackFunction) => {
-  //   document
-  //     .getElementById("test-mode-button")
-  //     .addEventListener("click", callbackFunction);
-  // };
-
-  /**
-   * Changes the device input mode button text content.
-   */
-  // const deviceInputModeButtonTextContent = {
-  //   /**
-  //    * Sets the text content to "Switch to test mode"
-  //    */
-  //   switchToTestMode: () => {
-  //     document.getElementById("test-mode-button").textContent =
-  //       "Switch to test mode";
-  //   },
-  //   /**
-  //    * Sets the text content to "Switch to normal mode"
-  //    */
-  //   switchToNormalMode: () => {
-  //     document.getElementById("test-mode-button").textContent =
-  //       "Switch to normal mode";
-  //   },
-  // };
-
-  /**
    * Binds the connect device button click event with the passed function.
    *
    * @param {function(undefined): undefined} callbackFunction The function to
@@ -477,18 +352,6 @@ export const homeView = (function () {
   };
 
   /**
-   * Binds the test input button click event with the passed function.
-   *
-   * @param {function(undefined): undefined} callbackFunction The function to
-   *     be executed when the button is clicked
-   */
-  // const testInputButtonOnClick = (callbackFunction) => {
-  //   document
-  //     .getElementById("test-input-button")
-  //     .addEventListener("click", callbackFunction);
-  // };
-
-  /**
    * Updates the devices mappings by checking scanning the UI of the pop up
    *
    * @returns {DevicesKeysMappings}
@@ -497,12 +360,11 @@ export const homeView = (function () {
     const allSupportedDevicesMappings =
       await homeController.getAllSupportedDevicesKeyMappings();
     console.log("conncted device", homeController.getConnectedDevices());
-    for (const connectedDevice of homeController.getConnectedDevices()) {
+    const devicesContainer = document.getElementById("devices-space");
+    const devicesList = devicesContainer.querySelectorAll(".mapping-div");
+    Array.from(devicesList).forEach((mappingDiv) => {
       const someDeviceKeyMappings = {};
-      const device = `${connectedDevice.deviceName}-${connectedDevice.vendorId}-${connectedDevice.productId}`;
-      const deviceMappingsHolderElement = document.getElementById(device);
-      const keyMappingList =
-        deviceMappingsHolderElement.querySelectorAll(".key-mapping");
+      const keyMappingList = mappingDiv.querySelectorAll(".key-mapping");
       const inputKeys = [];
       Array.from(keyMappingList).forEach((parentDiv, index) => {
         const inputKey = parentDiv.querySelector(".input-key").value;
@@ -524,9 +386,10 @@ export const homeView = (function () {
           }
         }
       });
-      allSupportedDevicesMappings[device].mappings = someDeviceKeyMappings;
+      allSupportedDevicesMappings[mappingDiv.getAttribute("id")].mappings =
+        someDeviceKeyMappings;
       console.log("updatedddd", allSupportedDevicesMappings);
-    }
+    });
     return allSupportedDevicesMappings;
   };
 
@@ -535,11 +398,6 @@ export const homeView = (function () {
     downloadJSONButtonOnClick,
     deviceDisconnectButton,
     retrieveMappingsFromUI,
-    // deviceInputModeButtonOnClick,
-    // deviceInputModeButtonTextContent,
     showMappings,
-    // testInputButtonOnClick,
-    // testModeButton,
-    // updateDevicesConnectedLabel,
   };
 })();

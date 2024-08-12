@@ -15,18 +15,6 @@ export async function loadSVG(file) {
   }
 }
 
-function getKeyCode(character) {
-  const input = document.createElement("input");
-  input.value = character;
-  document.body.appendChild(input);
-
-  const event = new KeyboardEvent("keydown", { key: character });
-  input.dispatchEvent(event);
-
-  document.body.removeChild(input);
-  return event.keyCode || event.which;
-}
-
 // {
 //   "name": "Foot pedal",
 //   "pid": 2330,
